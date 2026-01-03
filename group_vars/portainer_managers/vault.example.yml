@@ -1,4 +1,5 @@
 # Encrypt a copy of this file with `ansible-vault encrypt group_vars/portainer_managers/vault.yml`
 # Do not commit plaintext secrets.
+portainer_api_token: "CHANGE_ME_WITH_YOUR_PORTAINER_API_TOKEN"
 jellystat_jwt_secret: "CHANGE_ME_WITH_A_RANDOM_VALUE"
 jellystat_db_password: "CHANGE_ME_WITH_A_RANDOM_DB_PASSWORD"

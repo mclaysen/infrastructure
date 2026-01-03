@@ -1,0 +1,20 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    ports:
+      - 8096:8096/tcp
+      - 7359:7359/udp
+    volumes:
+      - /var/lib/docker/volumes/jellyfin-config/_data:/config
+      - /var/lib/docker/volumes/jellyfin-cache/_data:/cache
+      - type: bind
+        source: /mnt/truenas_shares/home
+        target: /media
+        read_only: true
+    restart: 'unless-stopped'
+    networks:
+      - jellyfin-network
+networks:
+  jellyfin-network:
+    driver: bridge
