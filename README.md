@@ -22,6 +22,11 @@ Starter Ansible project for managing Portainer stacks.
 ## Run
 Execute the playbook against the Portainer managers:
 ```bash
+ansible-playbook portainer-stacks.yml --vault-password-file ./.vault_pass
+```
+
+Or interactively prompt for the vault password:
+```bash
 ansible-playbook portainer-stacks.yml --ask-vault-pass
 ```
 
