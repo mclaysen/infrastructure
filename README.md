@@ -3,6 +3,10 @@
 Starter Ansible project for managing Portainer stacks.
 
 ## Setup
+- Run the setup script to configure git hooks:
+  ```bash
+  ./setup.sh
+  ```
 - Install Ansible (pipx: `pipx install ansible` or pip in a venv).
 - Install required collection:
   ```bash
@@ -18,7 +22,7 @@ Starter Ansible project for managing Portainer stacks.
 ## Run
 Execute the playbook against the Portainer managers:
 ```bash
-ansible-playbook portainer-stacks.yml
+ansible-playbook portainer-stacks.yml --ask-vault-pass
 ```
 
 ### Stacks configuration
@@ -42,6 +46,20 @@ stacks:
   - Use Jinja templates for stacks that need secrets. Example template: [stacks/jellystat.yml.j2](stacks/jellystat.yml.j2) (expects `jellystat_jwt_secret` and `jellystat_db_password` from Vault).
   - The play renders templates to `/tmp/portainer-stacks/<name>.yml` on the control node, deploys them with `convert_secrets: true`, then deletes the rendered files.
   - Avoid `--diff` when deploying secret-bearing templates and consider `no_log` on any added secret tasks.
+
+### Updating secrets
+Store your vault password in `.vault_pass` (git-ignored) for convenience:
+```bash
+echo "your_vault_password" > .vault_pass
+chmod 600 .vault_pass
+```
+
+Edit the encrypted vault file directly:
+```bash
+ansible-vault edit ./group_vars/portainer_managers/vault.yml --vault-password-file ./.vault_pass
+```
+
+This opens your editor with the decrypted contents and automatically re-encrypts on save.
 
 ## Notes
 - Defaults live in [ansible.cfg](ansible.cfg) (YAML callback output, retry files disabled, host key checking off).

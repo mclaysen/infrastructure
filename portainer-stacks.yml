@@ -7,27 +7,25 @@
   vars_files:
     - group_vars/portainer_managers/vault.yml
   vars:
-    portainer_url: "https://YOUR_PORTAINER_HOST:9443"
-    portainer_token: "{{ lookup('env', 'PORTAINER_API_TOKEN') }}"
+    portainer_url: "https://container-manager.mclaysen.com"
+    portainer_token: "{{ portainer_api_token }}"
     endpoint_id: 1
     rendered_dir: "/tmp/portainer-stacks"
     stacks:
-      - name: example-stack
-        file: stacks/example-stack.yml
+      - name: jellyfin
+        template: stacks/jellyfin.yml.j2
         stack_type: standalone
-        endpoint_id: 1
+        endpoint_id: 3
         env: []
         prune: true
-        pull_images: false
-        convert_secrets: true
+        pull_images: true
       - name: jellystat
         template: stacks/jellystat.yml.j2
         stack_type: standalone
-        endpoint_id: 1
+        endpoint_id: 3
         env: []
         prune: true
-        pull_images: false
-        convert_secrets: true
+        pull_images: true
   tasks:
     - name: Ensure API token is provided
       ansible.builtin.assert:
@@ -40,6 +38,7 @@
         state: directory
         mode: "0700"
       delegate_to: localhost
+      become: false
       run_once: true
 
     - name: Render compose templates for stacks
@@ -51,6 +50,7 @@
         label: "{{ item.name }}"
       no_log: true
       delegate_to: localhost
+      become: false
       run_once: true
 
     - name: Deploy or update Portainer stacks from compose files
@@ -62,15 +62,16 @@
         stack_source: file
         endpoint_id: "{{ item.endpoint_id | default(endpoint_id) }}"
         file: "{{ (item.template is defined) | ternary(rendered_dir ~ '/' ~ item.name ~ '.yml', item.file) }}"
-        env: {{ item.env | default([]) }}
-        prune: {{ item.prune | default(true) }}
-        pull_images: {{ item.pull_images | default(false) }}
-        convert_secrets: {{ item.convert_secrets | default(true) }}
+        env: "{{ item.env | default([]) }}"
+        prune: "{{ item.prune | default(true) }}"
+        pull_images: "{{ item.pull_images | default(false) }}"
+        timeout: 300
         state: present
       loop: "{{ stacks }}"
       loop_control:
         label: "{{ item.name }}"
       delegate_to: localhost
+      become: false
       run_once: true
 
     - name: Clean up rendered compose files
@@ -81,4 +82,5 @@
       loop_control:
         label: "{{ item.name }}"
       delegate_to: localhost
+      become: false
       run_once: true
