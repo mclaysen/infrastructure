@@ -1,0 +1,24 @@
+version: "3.8"
+services:
+  jellystat:
+    image: cyfershepard/jellystat:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - JWT_SECRET={{ jellystat_jwt_secret }}
+      - PORT=3000
+      - NODE_ENV=production
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=jellystat
+      - POSTGRES_PASSWORD={{ jellystat_db_password }}
+      - POSTGRES_DB=jellystat
+    volumes:
+      - jellystat-db:/var/lib/postgresql/data
+volumes:
+  jellystat-db:

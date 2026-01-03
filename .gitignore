@@ -1,0 +1,12 @@
+*.retry
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+# Ansible Vault
+*.unencrypted
+# Python
+__pycache__/
+*.pyc
