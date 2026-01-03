@@ -1,6 +1,6 @@
 # Infrastructure Ansible
 
-Starter Ansible project for managing Portainer stacks.
+Ansible project for managing infrastructure across Portainer-managed hosts and standalone Docker VPS hosts.
 
 ## Setup
 - Run the setup script to configure git hooks:
@@ -8,26 +8,34 @@ Starter Ansible project for managing Portainer stacks.
   ./setup.sh
   ```
 - Install Ansible (pipx: `pipx install ansible` or pip in a venv).
-- Install required collection:
+- Install required collections:
   ```bash
   ansible-galaxy collection install -r requirements.yml
   ```
-- Update inventory in [inventories/hosts.ini](inventories/hosts.ini) with your Portainer manager host(s).
-- Add your stack compose file at `stacks/example-stack.yml` or use a Jinja2 template (see [stacks/jellystat.yml.j2](stacks/jellystat.yml.j2)) and list it in `stacks` in [portainer-stacks.yml](portainer-stacks.yml).
-- Export a Portainer API token:
-  ```bash
-  export PORTAINER_API_TOKEN="<token>"
-  ```
+- Update inventory in [inventories/hosts.ini](inventories/hosts.ini):
+  - `[portainer_managers]` - Hosts managed via Portainer API
+  - `[tunnel_hosts]` - VPS hosts with direct Docker access
+  
+---
 
-## Run
-Execute the playbook against the Portainer managers:
+## Portainer-Managed Infrastructure
+
+For hosts running Portainer where stacks are deployed via the Portainer API.
+
+### Setup
+- Add hosts to `[portainer_managers]` in [inventories/hosts.ini](inventories/hosts.ini)
+- Create and encrypt secrets:
+  ```bash
+  cp group_vars/portainer_managers/vault.example.yml group_vars/portainer_managers/vault.yml
+  ansible-vault edit group_vars/portainer_managers/vault.yml --vault-password-file ./.vault_pass
+  ```
+- Add Portainer API token and stack secrets to vault
+- Configure stacks in [portainer-stacks.yml](portainer-stacks.yml)
+
+### Run
+Deploy or update Portainer stacks:
 ```bash
 ansible-playbook portainer-stacks.yml --vault-password-file ./.vault_pass
-```
-
-Or interactively prompt for the vault password:
-```bash
-ansible-playbook portainer-stacks.yml --ask-vault-pass
 ```
 
 ### Stacks configuration
@@ -43,14 +51,49 @@ stacks:
         value: info
     prune: true            # remove orphaned services
     pull_images: false     # set true to always pull
-    convert_secrets: true  # convert compose secrets into Portainer secrets
 ```
 
-  ### Secrets and templated stacks
-  - Keep secrets in an encrypted Vault file, e.g. copy [group_vars/portainer_managers/vault.example.yml](group_vars/portainer_managers/vault.example.yml) to `group_vars/portainer_managers/vault.yml` and encrypt it with `ansible-vault encrypt`.
-  - Use Jinja templates for stacks that need secrets. Example template: [stacks/jellystat.yml.j2](stacks/jellystat.yml.j2) (expects `jellystat_jwt_secret` and `jellystat_db_password` from Vault).
-  - The play renders templates to `/tmp/portainer-stacks/<name>.yml` on the control node, deploys them with `convert_secrets: true`, then deletes the rendered files.
-  - Avoid `--diff` when deploying secret-bearing templates and consider `no_log` on any added secret tasks.
+### Secrets and templated stacks
+- Keep secrets in an encrypted Vault file
+- Use Jinja templates for stacks that need secrets. Example: [stacks/jellystat.yml.j2](stacks/jellystat.yml.j2)
+- The play renders templates to `/tmp/portainer-stacks/<name>.yml` on the control node, deploys them, then deletes the rendered files
+- Avoid `--diff` when deploying secret-bearing templates
+
+---
+
+## Docker VPS Infrastructure
+
+For VPS hosts with direct Docker access (no Portainer).
+
+### Initial VPS Setup
+Bootstrap a fresh VPS with Docker:
+```bash
+ansible-playbook vps-bootstrap.yml --vault-password-file ./.vault_pass
+```
+
+This installs:
+- Docker and Docker Compose plugin
+- Firewall configuration
+- Directory structure at `/opt/docker-stacks`
+
+### Deploy Stacks
+Configure stacks in [vps-stacks.yml](vps-stacks.yml) and deploy:
+```bash
+ansible-playbook vps-stacks.yml --vault-password-file ./.vault_pass
+```
+
+Stacks are deployed via `docker compose` directly on the VPS.
+
+### VPS Secrets
+Create and encrypt VPS-specific secrets:
+```bash
+cp group_vars/tunnel_hosts/vault.example.yml group_vars/tunnel_hosts/vault.yml
+ansible-vault edit group_vars/tunnel_hosts/vault.yml --vault-password-file ./.vault_pass
+```
+
+---
+
+## General
 
 ### Updating secrets
 Store your vault password in `.vault_pass` (git-ignored) for convenience:
@@ -59,14 +102,16 @@ echo "your_vault_password" > .vault_pass
 chmod 600 .vault_pass
 ```
 
-Edit the encrypted vault file directly:
+Edit encrypted vault files:
 ```bash
+# Portainer secrets
 ansible-vault edit ./group_vars/portainer_managers/vault.yml --vault-password-file ./.vault_pass
+
+# VPS secrets
+ansible-vault edit ./group_vars/tunnel_hosts/vault.yml --vault-password-file ./.vault_pass
 ```
 
-This opens your editor with the decrypted contents and automatically re-encrypts on save.
-
 ## Notes
-- Defaults live in [ansible.cfg](ansible.cfg) (YAML callback output, retry files disabled, host key checking off).
-- `endpoint_id` defaults to `1`; change if your Portainer endpoint differs.
-- Set `state: absent` in the `portainer_stack` task if you want to remove a stack.
+- Configuration defaults in [ansible.cfg](ansible.cfg)
+- Pre-commit hook validates encrypted vault files aren't accidentally committed as plaintext
+- Use Jinja2 templates in `stacks/` for compose files needing secret injection

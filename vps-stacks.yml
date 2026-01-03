@@ -1,0 +1,81 @@
+---
+- name: Deploy Docker Compose stacks to VPS
+  hosts: tunnel_hosts
+  become: true
+  vars_files:
+    - group_vars/tunnel_hosts/vault.yml
+  vars:
+    rendered_dir: "/tmp/vps-stacks"
+    stacks:
+      - name: pangolin
+        template: stacks/pangolin.yml.j2
+  tasks:
+    - name: Ensure local rendered directory exists
+      ansible.builtin.file:
+        path: "{{ rendered_dir }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Render compose templates locally
+      ansible.builtin.template:
+        src: "{{ item.template }}"
+        dest: "{{ rendered_dir }}/{{ item.name }}.yml"
+      loop: "{{ stacks | selectattr('template', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Create stack directories on VPS
+      ansible.builtin.file:
+        path: "{{ compose_project_dir }}/{{ item.name }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ stacks }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Copy rendered compose files to VPS
+      ansible.builtin.copy:
+        src: "{{ rendered_dir }}/{{ item.name }}.yml"
+        dest: "{{ compose_project_dir }}/{{ item.name }}/docker-compose.yml"
+        mode: '0644'
+      loop: "{{ stacks | selectattr('template', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: Copy static compose files to VPS
+      ansible.builtin.copy:
+        src: "{{ item.file }}"
+        dest: "{{ compose_project_dir }}/{{ item.name }}/docker-compose.yml"
+        mode: '0644'
+      loop: "{{ stacks | selectattr('file', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Deploy stacks with Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir }}/{{ item.name }}"
+        state: present
+        pull: "{{ item.pull_images | default('missing') }}"
+        remove_orphans: "{{ item.prune | default(true) }}"
+      loop: "{{ stacks }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Clean up local rendered files
+      ansible.builtin.file:
+        path: "{{ rendered_dir }}/{{ item.name }}.yml"
+        state: absent
+      loop: "{{ stacks | selectattr('template', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+      delegate_to: localhost
+      become: false
+      run_once: true

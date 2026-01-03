@@ -1,0 +1,5 @@
+# Non-secret configuration for tunnel_hosts
+timezone: "America/New_York"
+
+# Docker compose project directory on VPS
+compose_project_dir: "/opt/docker-stacks"
