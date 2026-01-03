@@ -1,0 +1,25 @@
+#!/bin/sh
+# Pre-commit hook to ensure vault files are encrypted
+
+# Pattern to match vault files (e.g., any file ending in vault.yml or inside a vault/ directory)
+VAULT_PATTERN="vault.yml"
+
+# Check staged files
+STAGED_FILES=$(git diff --cached --name-only)
+
+for FILE in $STAGED_FILES; do
+    # Check if file matches vault pattern
+    if echo "$FILE" | grep -q "$VAULT_PATTERN"; then
+        # Check if file exists (it might be deleted)
+        if [ -f "$FILE" ]; then
+            # Check for Ansible Vault header
+            if ! head -n 1 "$FILE" | grep -q "^\$ANSIBLE_VAULT"; then
+                echo "❌ ERROR: Attempting to commit unencrypted vault file: $FILE"
+                echo "   Please encrypt it using: ansible-vault encrypt $FILE"
+                exit 1
+            fi
+        fi
+    fi
+done
+
+exit 0
