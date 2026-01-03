@@ -5,7 +5,7 @@ services:
     container_name: jellystat
     restart: unless-stopped
     ports:
-      - '0.0.0.0:3000:3000'
+      - '3000:3000'
     environment:
       - POSTGRES_USER=jellystat
       - POSTGRES_PASSWORD={{ jellystat_db_password }}
@@ -21,7 +21,7 @@ services:
       - jellyfin-network
   jellystat-db:
     image: 'postgres:15.2'
-    shm_size: 1gb
+    shm_size: 256mb
     container_name: jellystat-db
     restart: unless-stopped
     environment:
