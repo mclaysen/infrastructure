@@ -1,24 +1,39 @@
-version: "3.8"
+version: '3.8'
 services:
   jellystat:
     image: cyfershepard/jellystat:latest
+    container_name: jellystat
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '0.0.0.0:3000:3000'
     environment:
+      - POSTGRES_USER=jellystat
+      - POSTGRES_PASSWORD={{ jellystat_db_password }}
+      - POSTGRES_IP=jellystat-db
+      - POSTGRES_PORT=5432
       - JWT_SECRET={{ jellystat_jwt_secret }}
-      - PORT=3000
-      - NODE_ENV=production
+      - TZ={{ timezone }}
     depends_on:
-      - db
-  db:
-    image: postgres:16
+      - jellystat-db
+    volumes:
+      - 'jellystat-backup-data:/app/backend/backup-data'
+    networks:
+      - jellyfin-network
+  jellystat-db:
+    image: 'postgres:15.2'
+    shm_size: 1gb
+    container_name: jellystat-db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=jellystat
       - POSTGRES_PASSWORD={{ jellystat_db_password }}
-      - POSTGRES_DB=jellystat
     volumes:
-      - jellystat-db:/var/lib/postgresql/data
+      - 'jellystat-db:/var/lib/postgresql/data'
+    networks:
+      - jellyfin-network
+networks:
+  jellyfin-network:
+    driver: bridge
 volumes:
   jellystat-db:
+  jellystat-backup-data:
