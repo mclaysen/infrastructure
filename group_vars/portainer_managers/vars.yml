@@ -1,2 +1,4 @@
 # Non-secret configuration values
 timezone: "America/New_York"
+
+domain: "mclaysen.com"

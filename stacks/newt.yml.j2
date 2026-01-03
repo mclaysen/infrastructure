@@ -1,0 +1,9 @@
+services:
+  newt:
+    image: fosrl/newt
+    container_name: newt
+    restart: unless-stopped
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.{{ domain }}
+      - NEWT_ID={{ newt_id }}
+      - NEWT_SECRET={{ newt_secret }}
