@@ -1,0 +1,24 @@
+---
+- name: Manage Portainer stacks
+  hosts: portainer_managers
+  gather_facts: false
+  vars:
+    portainer_url: "https://YOUR_PORTAINER_HOST:9443"
+    portainer_api_token: "{{ lookup('env', 'PORTAINER_API_TOKEN') }}"
+    stack_name: "example-stack"
+    compose_file: "stacks/example-stack.yml"
+    endpoint_id: 1
+  tasks:
+    - name: Ensure API token is provided
+      ansible.builtin.assert:
+        that: portainer_api_token != ""
+        fail_msg: "PORTAINER_API_TOKEN environment variable must be set"
+
+    - name: Deploy or update Portainer stack
+      bgtor.portainer.portainer_stack:
+        url: "{{ portainer_url }}"
+        api_token: "{{ portainer_api_token }}"
+        state: present
+        stack_name: "{{ stack_name }}"
+        endpoint_id: "{{ endpoint_id }}"
+        compose: "{{ lookup('file', compose_file) }}"
