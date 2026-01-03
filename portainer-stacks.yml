@@ -26,6 +26,13 @@
         env: []
         prune: true
         pull_images: true
+      - name: newt
+        template: stacks/newt.yml.j2
+        stack_type: standalone
+        endpoint_id: 3
+        env: []
+        prune: true
+        pull_images: true
   tasks:
     - name: Ensure API token is provided
       ansible.builtin.assert:
