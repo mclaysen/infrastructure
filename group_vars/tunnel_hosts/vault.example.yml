@@ -1,7 +1,2 @@
-# Encrypt a copy of this file with `ansible-vault encrypt group_vars/tunnel_hosts/vault.yml`
-# Do not commit plaintext secrets.
-
 # Pangolin tunnel token (if using Pangolin for VPS connectivity)
 pangolin_tunnel_token: "CHANGE_ME_WITH_YOUR_PANGOLIN_TOKEN"
-
-# Add other VPS-specific secrets here

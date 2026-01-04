@@ -3,4 +3,3 @@ collections:
   - name: bgtor.portainer
   - name: community.docker
   - name: community.general
-  - name: ansible.posix
