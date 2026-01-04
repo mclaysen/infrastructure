@@ -1,9 +1,11 @@
 ---
-- name: Bootstrap VPS with Docker
+- name: Bootstrap VPS
   hosts: tunnel_hosts
   become: true
   vars_files:
     - group_vars/tunnel_hosts/vault.yml
+  handlers:
+    - ansible.builtin.import_tasks: vps-tunnel/handlers/main.yml
   tasks:
     - name: Update all packages
       ansible.builtin.dnf:
@@ -11,80 +13,19 @@
         state: latest
         update_cache: true
 
-    - name: Install prerequisite packages
+    - name: Install basic tools
       ansible.builtin.dnf:
         name:
           - curl
-          - wget
-          - git
-          - vim
-          - firewalld
+          - nano
         state: present
-
-    - name: Start and enable firewalld
-      ansible.builtin.systemd:
-        name: firewalld
-        state: started
-        enabled: true
-
-    - name: Configure firewall - allow SSH
-      ansible.posix.firewalld:
-        service: ssh
-        permanent: true
-        state: enabled
-        immediate: true
 
     - name: Set timezone
       community.general.timezone:
         name: "{{ timezone }}"
 
-    - name: Remove conflicting packages
-      ansible.builtin.dnf:
-        name:
-          - docker
-          - docker-client
-          - docker-client-latest
-          - docker-common
-          - docker-latest
-          - docker-latest-logrotate
-          - docker-logrotate
-          - docker-engine
-          - podman
-          - runc
-        state: absent
+    - name: Setup users
+      ansible.builtin.import_tasks: vps-tunnel/tasks/user.yml
 
-    - name: Add Docker CE repository
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/centos/docker-ce.repo
-        dest: /etc/yum.repos.d/docker-ce.repo
-        mode: '0644'
-
-    - name: Install Docker
-      ansible.builtin.dnf:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-compose-plugin
-        state: present
-
-    - name: Start and enable Docker
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        enabled: true
-
-    - name: Create compose project directory
-      ansible.builtin.file:
-        path: "{{ compose_project_dir }}"
-        state: directory
-        mode: '0755'
-
-    - name: Verify Docker installation
-      ansible.builtin.command: docker --version
-      register: docker_version
-      changed_when: false
-
-    - name: Display Docker version
-      ansible.builtin.debug:
-        msg: "Docker installed: {{ docker_version.stdout }}"
+    - name: Configure SSH security
+      ansible.builtin.import_tasks: vps-tunnel/tasks/ssh.yml

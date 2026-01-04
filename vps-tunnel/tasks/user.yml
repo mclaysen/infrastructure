@@ -1,0 +1,22 @@
+---
+- name: Create users
+  ansible.builtin.user:
+    name: "deployUser"
+    state: present
+    comment: "Deploy User"
+    shell: /bin/bash
+    create_home: yes
+  
+- name: Create ssh directory for user
+  ansible.builtin.file:
+    path: "/home/deployUser/.ssh"
+    state: directory
+    owner: "deployUser"
+    group: "deployUser"
+    mode: "0700"
+
+- name: Import authorized keys for user
+  ansible.builtin.authorized_key:
+    user: "deployUser"
+    state: present
+    key: "{{ lookup('file', '/Users/mclaysen/.ssh/deployuser_vps_tunnel.pub') }}"
