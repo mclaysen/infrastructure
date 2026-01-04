@@ -1,55 +1,91 @@
+name: pangolin
+networks:
+  default:
+    driver: bridge
+    enable_ipv6: true
+    name: pangolin
 services:
-  pangolin:
-    image: fosrl/pangolin:latest # https://github.com/fosrl/pangolin/releases
-    container_name: pangolin
+  crowdsec:
+    command: -t
+    container_name: crowdsec
+    environment:
+      COLLECTIONS: crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      ENROLL_INSTANCE_NAME: pangolin-crowdsec
+      ENROLL_TAGS: docker
+      GID: "1000"
+      PARSERS: crowdsecurity/whitelists
+    healthcheck:
+      interval: 10s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD
+        - cscli
+        - lapi
+        - status
+      timeout: 5s
+    image: docker.io/crowdsecurity/crowdsec:latest
+    labels:
+      - traefik.enable=false
+    ports:
+      - 6060:6060
     restart: unless-stopped
     volumes:
-      - ./config:/app/config
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/"]
-      interval: "3s"
-      timeout: "3s"
-      retries: 15
-
+      - ./config/crowdsec:/etc/crowdsec
+      - ./config/crowdsec/db:/var/lib/crowdsec/data
+      - ./config/traefik/logs:/var/log/traefik
   gerbil:
-    image: fosrl/gerbil:latest # https://github.com/fosrl/gerbil/releases
-    container_name: gerbil
-    restart: unless-stopped
-    depends_on:
-      pangolin:
-        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
     command:
       - --reachableAt=http://gerbil:3004
       - --generateAndSaveKeyTo=/var/config/key
       - --remoteConfig=http://pangolin:3001/api/v1/
-    volumes:
-      - ./config/:/var/config
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    ports:
-      - 51820:51820/udp
-      - 21820:21820/udp
-      - 443:443 # Port for traefik because of the network_mode
-      - 80:80 # Port for traefik because of the network_mode
-
-  traefik:
-    image: traefik:v3.4.0
-    container_name: traefik
-    restart: unless-stopped
-    network_mode: service:gerbil # Ports appear on the gerbil service
+    container_name: gerbil
     depends_on:
       pangolin:
         condition: service_healthy
+    image: docker.io/fosrl/gerbil:1.3.0
+    ports:
+      - 51820:51820/udp
+      - 21820:21820/udp
+      - 443:443
+      - 80:80
+    restart: unless-stopped
+    volumes:
+      - ./config/:/var/config
+  pangolin:
+    container_name: pangolin
+    healthcheck:
+      interval: 10s
+      retries: 15
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:3001/api/v1/
+      timeout: 10s
+    image: docker.io/fosrl/pangolin:1.14.1
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+  traefik:
     command:
       - --configFile=/etc/traefik/traefik_config.yml
-    environment:
-      - CLOUDFLARE_DNS_API_TOKEN={{ cloudflare_dns_api_token }}
+    container_name: traefik
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+      pangolin:
+        condition: service_healthy
+    image: docker.io/traefik:v3.6
+    network_mode: service:gerbil
+    restart: unless-stopped
     volumes:
-      - ./config/traefik:/etc/traefik:ro # Volume to store the Traefik configuration
-      - ./config/letsencrypt:/letsencrypt # Volume to store the Let's Encrypt certificates
-      - ./config/traefik/logs:/var/log/traefik # Volume to store Traefik logs
-
+      - ./config/traefik:/etc/traefik:ro
+      - ./config/letsencrypt:/letsencrypt
+      - ./config/traefik/logs:/var/log/traefik
   geoipupdate:
     container_name: geoipupdate
     image: ghcr.io/maxmind/geoipupdate
@@ -61,8 +97,3 @@ services:
       - GEOIPUPDATE_FREQUENCY=72
     volumes:
       - './config/GeoLite2:/usr/share/GeoIP'
-
-networks:
-  default:
-    driver: bridge
-    name: pangolin

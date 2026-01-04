@@ -1,4 +1,6 @@
 # Pangolin tunnel token (if using Pangolin for VPS connectivity)
+crowdsec_lapi_key: "CHANGE_ME_WITH_YOUR_CROWDSEC_LAPI_KEY"
+
 pangolin_tunnel_token: "CHANGE_ME_WITH_YOUR_PANGOLIN_TOKEN"
 cloudflare_dns_api_token: "CHANGE_ME_WITH_YOUR_CLOUDFLARE_DNS_API_TOKEN"
 max_mind_license_key: "CHANGE_ME_WITH_YOUR_MAX_MIND_LICENSE_KEY"
