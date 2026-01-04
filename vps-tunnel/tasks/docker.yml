@@ -48,3 +48,9 @@
 - name: Display Docker hello-world output
   ansible.builtin.debug:
     var: docker_hello_world.stdout
+
+- name: Assign user to docker group
+  ansible.builtin.user:
+    name: "{{ deploy_user_name }}"
+    groups: docker
+    append: yes

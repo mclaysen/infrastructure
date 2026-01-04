@@ -35,3 +35,6 @@
 
     - name: Install Docker
       ansible.builtin.import_tasks: vps-tunnel/tasks/docker.yml
+
+    - name: Deploy Pangolin
+      ansible.builtin.import_tasks: vps-tunnel/tasks/pangolin.yml

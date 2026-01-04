@@ -1,0 +1,45 @@
+---
+
+- name: Create directory structure for Pangolin
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0744
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+  loop:
+    - /home/{{ deploy_user_name }}/docker
+    - /home/{{ deploy_user_name }}/docker/config
+    - /home/{{ deploy_user_name }}/docker/config/db
+    - /home/{{ deploy_user_name }}/docker/config/traefik
+    - /home/{{ deploy_user_name }}/docker/config/letsencrypt
+    - /home/{{ deploy_user_name }}/docker/config/traefik/logs
+    - /home/{{ deploy_user_name }}/docker/config/GeoLite2
+
+- name: Render and deploy templates
+  ansible.builtin.template:
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '0744'
+  loop:
+    - { src: "../templates/docker-compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose.yml" }
+    - { src: "../templates/pangolin/dynamic_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml" }
+    - { src: "../templates/pangolin/traefik_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml" }
+    - { src: "../templates/pangolin/config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/config.yml" }
+
+- name: Start docker compose
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: /home/{{ deploy_user_name }}/docker
+
+- name: Ensure docker compose is running
+  ansible.builtin.command:
+    cmd: docker compose logs
+    chdir: /home/{{ deploy_user_name }}/docker
+
+- name: Verify
+  ansible.builtin.command:
+    cmd: docker compose ps
+    chdir: /home/{{ deploy_user_name }}/docker

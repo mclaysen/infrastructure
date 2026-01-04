@@ -1,6 +1,9 @@
 ---
 # Non-secret configuration for tunnel_hosts
 timezone: "America/New_York"
+domain: "mclaysen.com"
+email_address: "me@mclaysen.com"
+
 deploy_user_name: "deployUser"
 deployuser_ssh_public_key_path: "/Users/mclaysen/.ssh/deployuser_vps_tunnel.pub"
 
@@ -18,11 +21,11 @@ security_ssh_x11_forwarding: "no"
 security_sshd_state: started
 security_ssh_restart_handler_state: restarted
 security_ssh_allowed_users: 
-  - deployUser
+  - "{{ deploy_user_name }}"
 security_ssh_allowed_groups: []
 
 security_sudoers_passwordless:
-  - deployUser
+  - "{{ deploy_user_name }}"
 security_sudoers_passworded: []
 
 security_autoupdate_enabled: true
@@ -35,3 +38,8 @@ firewall_ports:
   - 51820/udp
   - 21820/udp
   - "{{ security_ssh_port }}/tcp"
+
+# Pangolin installer configuration
+pangolin_base_domain: "example.com"
+pangolin_dashboard_domain: "pangolin.example.com"
+pangolin_install_gerbil: "yes"
