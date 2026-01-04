@@ -1,0 +1,40 @@
+---
+
+- name: update to latest firewalld
+  ansible.builtin.dnf:
+    name: firewalld
+    state: latest
+  notify:
+    - restart firewalld
+
+- name: ensure firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+  register: firewalld_status
+
+- name: debug firewalld status
+  ansible.builtin.debug:
+    var: firewalld_status
+
+- name: set ports 
+  ansible.builtin.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+  loop: "{{ firewall_ports }}"
+  notify:
+    - restart firewalld
+
+- name: Flush handlers to restart firewalld
+  meta: flush_handlers
+
+- name: list firewall ports
+  ansible.builtin.command:
+    cmd: firewall-cmd --list-ports
+  register: firewall_ports_list
+  changed_when: false
+
+- name: debug firewall ports
+  ansible.builtin.debug:
+    var: firewall_ports_list.stdout_lines

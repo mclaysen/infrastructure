@@ -30,5 +30,8 @@
     - name: Configure SSH security
       ansible.builtin.import_tasks: vps-tunnel/tasks/ssh.yml
 
+    - name: Configure firewall
+      ansible.builtin.import_tasks: vps-tunnel/tasks/firewall.yml
+
     - name: Install Docker
       ansible.builtin.import_tasks: vps-tunnel/tasks/docker.yml

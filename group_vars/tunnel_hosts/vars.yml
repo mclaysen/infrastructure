@@ -29,4 +29,9 @@ security_autoupdate_enabled: true
 security_autoupdate_blacklist: []
 security_autoupdate_additional_origins: []
 
-security_fail2ban_custom_configuration_template: "jail.local.j2"
+firewall_ports:
+  - 80/tcp
+  - 443/tcp
+  - 51820/udp
+  - 21820/udp
+  - "{{ security_ssh_port }}/tcp"
