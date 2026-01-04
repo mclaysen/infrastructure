@@ -6,7 +6,7 @@
     comment: "Deploy User"
     shell: /bin/bash
     create_home: yes
-    groups: "wheel,docker"
+    groups: "wheel"
     append: yes
 
 - name: Create ssh directory for user
