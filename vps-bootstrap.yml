@@ -18,23 +18,30 @@
         name:
           - curl
           - nano
+          - python3-pip
+        state: present
+    
+    - name: Install pexpect for expect module
+      ansible.builtin.pip:
+        name: pexpect
+        executable: pip3
         state: present
 
     - name: Set timezone
       community.general.timezone:
         name: "{{ timezone }}"
 
-    - name: Setup users
-      ansible.builtin.import_tasks: vps-tunnel/tasks/user.yml
+    # - name: Setup users
+    #   ansible.builtin.import_tasks: vps-tunnel/tasks/user.yml
 
-    - name: Configure SSH security
-      ansible.builtin.import_tasks: vps-tunnel/tasks/ssh.yml
+    # - name: Configure SSH security
+    #   ansible.builtin.import_tasks: vps-tunnel/tasks/ssh.yml
 
-    - name: Configure firewall
-      ansible.builtin.import_tasks: vps-tunnel/tasks/firewall.yml
+    # - name: Configure firewall
+    #   ansible.builtin.import_tasks: vps-tunnel/tasks/firewall.yml
 
-    - name: Install Docker
-      ansible.builtin.import_tasks: vps-tunnel/tasks/docker.yml
+    # - name: Install Docker
+    #   ansible.builtin.import_tasks: vps-tunnel/tasks/docker.yml
 
     - name: Deploy Pangolin
       ansible.builtin.import_tasks: vps-tunnel/tasks/pangolin.yml
