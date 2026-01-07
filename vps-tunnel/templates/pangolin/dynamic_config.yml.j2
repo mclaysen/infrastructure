@@ -13,10 +13,10 @@ http:
             - 192.168.0.0/16
             - 100.89.137.0/20
           crowdsecAppsecBodyLimit: 10485760
-          crowdsecAppsecEnabled: true
-          crowdsecAppsecFailureBlock: true
+          crowdsecAppsecEnabled: false
+          crowdsecAppsecFailureBlock: false
           crowdsecAppsecHost: crowdsec:7422
-          crowdsecAppsecUnreachableBlock: true
+          crowdsecAppsecUnreachableBlock: false
           crowdsecLapiHost: crowdsec:8080
           crowdsecLapiKey: "{{ crowdsec_lapi_key }}"
           crowdsecLapiScheme: http

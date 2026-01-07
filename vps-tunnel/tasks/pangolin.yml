@@ -1,4 +1,33 @@
 ---
+- name: Stop docker containers
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    state: absent
+    remove_orphans: true
+    remove_images: local
+  when:  force_reinstall | default(false) | bool
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user_name }}/backups"
+    state: directory
+    mode: 0744
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+
+- name: gzip and backup configs
+  ansible.builtin.archive:
+    path: "/home/{{ deploy_user_name }}/docker"
+    dest: "/home/{{ deploy_user_name }}/backups/docker{{ ansible_date_time.epoch }}.tar.gz"
+    format: gz
+    owner: "{{ deploy_user_name }}"
+  when: force_reinstall | default(false) | bool
+
+- name: Clear out docker directory
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user_name }}/docker"
+    state: absent
+  when: force_reinstall | default(false) | bool
 
 - name: Create directory structure for Pangolin
   ansible.builtin.file:
@@ -15,6 +44,138 @@
     - /home/{{ deploy_user_name }}/docker/config/letsencrypt
     - /home/{{ deploy_user_name }}/docker/config/traefik/logs
     - /home/{{ deploy_user_name }}/docker/config/GeoLite2
+    - /home/{{ deploy_user_name }}/docker/config/prometheus
+
+- name: Create data folder for prometheus
+  ansible.builtin.file:
+    path: /home/{{ deploy_user_name }}/docker/config/prometheus/data
+    state: directory
+    owner: "nobody"
+    group: "nobody"
+
+- name: Download Pangolin install script
+  ansible.builtin.get_url:
+    url: "https://static.pangolin.net/get-installer.sh"
+    dest: "/home/{{ deploy_user_name }}/docker/install.sh"
+    mode: '0755'
+
+- name: Run the install.sh script to create the installer
+  ansible.builtin.command:
+    cmd: "/home/{{ deploy_user_name }}/docker/install.sh"
+    chdir: "/home/{{ deploy_user_name }}/docker"
+
+- name: Run Pangolin install script
+  ansible.builtin.expect:
+    command: "/home/{{ deploy_user_name }}/docker/installer"
+    chdir: "/home/{{ deploy_user_name }}/docker"
+    echo: true
+    timeout: 300
+    responses:
+      "Enterprise version of Pangolin":
+        - "no"
+      "Enter your base domain":
+        - "{{ domain }}"
+      "Enter the domain for the Pangolin dashboard":
+        - "pangolin.{{ domain }}"
+      "Enter email for Let's Encrypt certificates":
+        - "{{ email_address }}"
+      "Do you want to use Gerbil to allow tunneled connections":
+        - "yes"
+      "Enable email functionality":
+        - "no"
+      "Is your server IPv6 capable":
+        - "yes"
+      "Do you want to download the MaxMind GeoLite2 database":
+        - "yes"
+      "Would you like to install and start the containers":
+        - "yes"
+      "Would you like to run Pangolin as Docker or Podman":
+        - "docker"
+        - "docker"
+        - "docker"
+        - "docker"
+      "Would you like to install CrowdSec":
+        - "yes"
+      "Are you willing to manage CrowdSec":
+        - "yes"
+      "Are these values correct":
+        - "yes"
+  register: pangolin_install_output
+
+- name: Display installer output
+  ansible.builtin.debug:
+    var: pangolin_install_output.stdout_lines
+  when: pangolin_install_output.stdout is defined
+
+- name: Stop docker containers
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    state: stopped
+  
+- name: Convert httpChallenge to dnsChallenge with Cloudflare provider
+  ansible.builtin.replace:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
+    regexp: '(\s+)httpChallenge:\n\s+entryPoint:\s+web'
+    replace: '\1dnsChallenge:\n\1  provider: cloudflare'
+  
+- name: Update the traefik dynamic config with the cloudflare config for the domain
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml"
+    insertafter: ^\s*certResolver:\s+letsencrypt
+    marker: "#Setup wildcard domain"
+    block: |
+          {% filter indent(width=8, first=true) %}
+          domains:
+            - main: "{{ domain }}"
+              sans:
+                - "*.{{ domain }}"
+          {% endfilter %}
+
+
+- name: Update the docker compose file with the cloudflare api token
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
+    insertafter: '^\s+container_name: traefik'
+    block: |
+          {% filter indent(width=4, first=true) %}
+          environment:
+            CLOUDFLARE_DNS_API_TOKEN: {{ cloudflare_dns_api_token }}
+          {% endfilter %}
+
+- name: Open up port 8082 for the prometheus connector
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
+    insertafter: '^\s+80:80'
+    block: |
+          {% filter indent(width=6, first=true) %}
+          - 8082:8082
+          {% endfilter %}
+
+- name: Open up port 8082 fon traefik
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
+    insertafter: '^entryPoints:'
+    block: |
+          {% filter indent(width=2, first=true) %}
+          metrics:
+            address: ":8082"
+          {% endfilter %}
+
+- name: Add metrics for prometheus
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
+    block: |
+            metrics:
+              prometheus:
+                buckets:
+                  - 0.1
+                  - 0.3
+                  - 1.2
+                  - 5.0
+                entryPoint: metrics
+                addEntryPointsLabels: true
+                addRoutersLabels: true
+                addServicesLabels: true
 
 - name: Render and deploy templates
   ansible.builtin.template:
@@ -24,15 +185,27 @@
     dest: "{{ item.dest }}"
     mode: '0744'
   loop:
-    - { src: "../templates/docker-compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose.yml" }
-    - { src: "../templates/pangolin/dynamic_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml" }
-    - { src: "../templates/pangolin/traefik_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml" }
-    - { src: "../templates/pangolin/config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/config.yml" }
+    - { src: "../templates/prometheus_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus_config.yml" }
+    - { src: "../templates/prometheus_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml" }
+    - { src: "../templates/grafana_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml" }
+    # - { src: "../templates/pangolin/dynamic_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml" }
+    # - { src: "../templates/pangolin/traefik_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml" }
+    # - { src: "../templates/pangolin/config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/config.yml" }
 
-- name: Start docker compose
-  ansible.builtin.command:
-    cmd: docker compose up -d
-    chdir: /home/{{ deploy_user_name }}/docker
+- name: Start the docker compose containers again
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    state: present
+    recreate: always
+    files:
+      - docker-compose-prometheus.yml
+      - docker-compose-grafana.yml
+      - docker-compose.yml
+
+# - name: Start docker compose
+#   ansible.builtin.command:
+#     cmd: docker compose up -d
+#     chdir: /home/{{ deploy_user_name }}/docker
 
 - name: Ensure docker compose is running
   ansible.builtin.command:
