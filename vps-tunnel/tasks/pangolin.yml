@@ -7,6 +7,12 @@
     remove_images: local
   when:  force_reinstall | default(false) | bool
 
+- name: Stop docker containers for updating
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    state: stopped
+  when: not force_reinstall | default(true) | bool
+
 - name: Create backup directory
   ansible.builtin.file:
     path: "/home/{{ deploy_user_name }}/backups"
@@ -45,6 +51,9 @@
     - /home/{{ deploy_user_name }}/docker/config/traefik/logs
     - /home/{{ deploy_user_name }}/docker/config/GeoLite2
     - /home/{{ deploy_user_name }}/docker/config/prometheus
+    - /home/{{ deploy_user_name }}/docker/config/prometheus/data
+    - /home/{{ deploy_user_name }}/docker/config/grafana
+    - /home/{{ deploy_user_name }}/docker/config/grafana/data
 
 - name: Create data folder for prometheus
   ansible.builtin.file:
@@ -52,6 +61,13 @@
     state: directory
     owner: "nobody"
     group: "nobody"
+
+- name: Create data folder for grafana
+  ansible.builtin.file:
+    path: /home/{{ deploy_user_name }}/docker/config/grafana/data
+    state: directory
+    owner: "472"
+    group: "472"
 
 - name: Download Pangolin install script
   ansible.builtin.get_url:
@@ -100,6 +116,8 @@
         - "yes"
       "Are these values correct":
         - "yes"
+      "Would you like to update the MaxMind database":
+        - "no"
   register: pangolin_install_output
 
 - name: Display installer output
@@ -122,7 +140,7 @@
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml"
     insertafter: ^\s*certResolver:\s+letsencrypt
-    marker: "#Setup wildcard domain"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK WILDCARD DOMAIN"
     block: |
           {% filter indent(width=8, first=true) %}
           domains:
@@ -136,6 +154,7 @@
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
     insertafter: '^\s+container_name: traefik'
+    marker: "# {mark} ANSIBLE MANAGED BLOCK CLOUDFLARE"
     block: |
           {% filter indent(width=4, first=true) %}
           environment:
@@ -145,7 +164,8 @@
 - name: Open up port 8082 for the prometheus connector
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
-    insertafter: '^\s+80:80'
+    insertafter: '^\s+-\s+80:80'
+    marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS"
     block: |
           {% filter indent(width=6, first=true) %}
           - 8082:8082
@@ -155,15 +175,17 @@
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
     insertafter: '^entryPoints:'
+    marker: "# {mark} ANSIBLE MANAGED BLOCK TRAEFIK METRICS"
     block: |
           {% filter indent(width=2, first=true) %}
           metrics:
-            address: ":8082"
+            address: :8082
           {% endfilter %}
 
 - name: Add metrics for prometheus
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS METRICS"
     block: |
             metrics:
               prometheus:
@@ -185,12 +207,23 @@
     dest: "{{ item.dest }}"
     mode: '0744'
   loop:
-    - { src: "../templates/prometheus_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus_config.yml" }
+    - { src: "../templates/prometheus_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus.yml" }
     - { src: "../templates/prometheus_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml" }
     - { src: "../templates/grafana_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml" }
-    # - { src: "../templates/pangolin/dynamic_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml" }
-    # - { src: "../templates/pangolin/traefik_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml" }
-    # - { src: "../templates/pangolin/config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/config.yml" }
+    - { src: "../templates/maxmind_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-maxmind.yml" }
+
+- name: Update MaxMind DB path in config.yml
+  ansible.builtin.lineinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/config.yml"
+    regexp: '^\s*maxmind_db_path:'
+    line: '    maxmind_db_path: "./config/GeoLite2/GeoLite2-Country.mmdb"'
+
+- name: Update MaxMind ASN path in config.yml
+  ansible.builtin.lineinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/config.yml"
+    regexp: '^\s*maxmind_asn_path:'
+    line: '    maxmind_asn_path: "./config/GeoLite2/GeoLite2-ASN.mmdb"'
+    insertafter: '^\s*maxmind_db_path:'
 
 - name: Start the docker compose containers again
   community.docker.docker_compose_v2:
@@ -201,6 +234,7 @@
       - docker-compose-prometheus.yml
       - docker-compose-grafana.yml
       - docker-compose.yml
+      - docker-compose-maxmind.yml
 
 # - name: Start docker compose
 #   ansible.builtin.command:
