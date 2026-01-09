@@ -166,6 +166,7 @@
     path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
     insertafter: '^\s+-\s+80:80'
     marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS"
+    state: absent
     block: |
           {% filter indent(width=6, first=true) %}
           - 8082:8082
