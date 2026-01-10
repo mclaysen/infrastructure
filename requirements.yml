@@ -1,5 +1,9 @@
 ---
+roles:
+  - name: geerlingguy.node_exporter
+
 collections:
   - name: bgtor.portainer
   - name: community.docker
   - name: community.general
+  - name: prometheus.prometheus

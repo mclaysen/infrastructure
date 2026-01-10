@@ -54,3 +54,12 @@
     name: "{{ deploy_user_name }}"
     groups: docker
     append: yes
+
+- name: Deploy docker config
+  ansible.builtin.template:
+    src: ../templates/docker_daemon.json.j2
+    dest: /etc/docker/daemon.json
+  notify: restart docker
+
+- name: Flush handlers to restart docker
+  meta: flush_handlers

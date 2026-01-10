@@ -38,3 +38,11 @@
 - name: debug firewall ports
   ansible.builtin.debug:
     var: firewall_ports_list.stdout_lines
+
+- name: Allow Docker networks to access host
+  ansible.builtin.firewalld:
+    zone: trusted
+    source: "172.16.0.0/12"
+    permanent: true
+    state: enabled
+    immediate: true

@@ -13,3 +13,8 @@
     name: firewalld
     state: restarted
     enabled: true
+
+- name: restart docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
