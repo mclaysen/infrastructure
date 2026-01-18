@@ -1,11 +1,11 @@
 ---
 # Non-secret configuration for tunnel_hosts
-timezone: "America/New_York"
-domain: "mclaysen.com"
-email_address: "me@mclaysen.com"
+timezone: America/New_York
+domain: mclaysen.com
+email_address: me@mclaysen.com
 
-deploy_user_name: "deployUser"
-deployuser_ssh_public_key_path: "/Users/mclaysen/.ssh/deployuser_vps_tunnel.pub"
+deploy_user_name: deployUser
+deployuser_ssh_public_key_path: /Users/mclaysen/.ssh/deployuser_vps_tunnel.pub
 
 security_ssh_config_path: /etc/ssh/sshd_config
 security_sshd_name: sshd
@@ -40,6 +40,6 @@ firewall_ports:
   - "{{ security_ssh_port }}/tcp"
 
 # Pangolin installer configuration
-pangolin_base_domain: "example.com"
-pangolin_dashboard_domain: "pangolin.example.com"
-pangolin_install_gerbil: "yes"
+pangolin_base_domain: example.com
+pangolin_dashboard_domain: pangolin.example.com
+pangolin_install_gerbil: yes
