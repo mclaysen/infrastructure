@@ -1,0 +1,21 @@
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.9.1
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /home/{{ username }}/docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring-network
+volumes:
+  prometheus_data:
+networks:
+  monitoring-network:
+    driver: bridge

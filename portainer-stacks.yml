@@ -1,4 +1,23 @@
 ---
+- name: Prepare Stack Configurations
+  hosts: container_manager
+  become: true
+  vars_files:
+    - group_vars/portainer_managers/vars.yml
+  tasks:
+    - name: Create monitoring config directory
+      ansible.builtin.file:
+        path: "/home/{{ username }}/docker/monitoring/prometheus"
+        state: directory
+        mode: '0755'
+        recurse: true
+
+    - name: Place Prometheus configuration
+      ansible.builtin.template:
+        src: stacks/prometheus_config.yml.j2
+        dest: "/home/{{ username }}/docker/monitoring/prometheus/prometheus.yml"
+        mode: '0644'
+
 - name: Manage Portainer stacks
   hosts: portainer_managers
   gather_facts: false
@@ -7,11 +26,18 @@
   vars_files:
     - group_vars/portainer_managers/vault.yml
   vars:
-    portainer_url: "https://container-manager.mclaysen.com"
+    portainer_url: https://container-manager.mclaysen.com
     portainer_token: "{{ portainer_api_token }}"
     endpoint_id: 1
-    rendered_dir: "/tmp/portainer-stacks"
+    rendered_dir: /tmp/portainer-stacks
     stacks:
+      - name: monitoring_stack
+        template: stacks/monitoring_stack.yml.j2
+        stack_type: standalone
+        endpoint_id: 3
+        env: []
+        prune: true
+        pull_images: true
       - name: jellyfin
         template: stacks/jellyfin.yml.j2
         stack_type: standalone
@@ -44,7 +70,7 @@
     - name: Ensure API token is provided
       ansible.builtin.assert:
         that: portainer_token != ""
-        fail_msg: "PORTAINER_API_TOKEN environment variable must be set"
+        fail_msg: PORTAINER_API_TOKEN environment variable must be set
 
     - name: Ensure rendered compose directory exists
       ansible.builtin.file:
