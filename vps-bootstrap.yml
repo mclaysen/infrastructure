@@ -12,6 +12,7 @@
         name: "*"
         state: latest
         update_cache: true
+        allowerasing: true
 
     - name: Install basic tools
       ansible.builtin.dnf:

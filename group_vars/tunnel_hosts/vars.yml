@@ -5,12 +5,12 @@ domain: mclaysen.com
 email_address: me@mclaysen.com
 
 deploy_user_name: deployUser
-deployuser_ssh_public_key_path: /Users/mclaysen/.ssh/deployuser_vps_tunnel.pub
+deployuser_ssh_public_key_path: ~/.ssh/rack_nerd_vps1.pub
 
 security_ssh_config_path: /etc/ssh/sshd_config
 security_sshd_name: sshd
 
-security_ssh_port: 7822
+security_ssh_port: 22
 security_ssh_password_authentication: "no"
 security_ssh_permit_root_login: "no"
 security_ssh_usedns: "no"

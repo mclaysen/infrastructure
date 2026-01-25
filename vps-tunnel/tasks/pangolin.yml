@@ -1,23 +1,31 @@
 ---
+- name: Create docker directory
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user_name }}/docker"
+    state: directory
+    mode: '0744'
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+
+- name: Validate compose file exists
+  ansible.builtin.stat:
+    path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
+  register: docker_compose_stat
+
 - name: Stop docker containers
   community.docker.docker_compose_v2:
     project_src: "/home/{{ deploy_user_name }}/docker"
     state: absent
     remove_orphans: true
-    remove_images: local
-  when:  force_reinstall | default(false) | bool
-
-- name: Stop docker containers for updating
-  community.docker.docker_compose_v2:
-    project_src: "/home/{{ deploy_user_name }}/docker"
-    state: stopped
-  when: not force_reinstall | default(true) | bool
+    remove_images: all
+    check_files_existing: false
+  when: docker_compose_stat.stat.exists
 
 - name: Create backup directory
   ansible.builtin.file:
     path: "/home/{{ deploy_user_name }}/backups"
     state: directory
-    mode: 0744
+    mode: '0744'
     owner: "{{ deploy_user_name }}"
     group: "{{ deploy_user_name }}"
 
@@ -27,19 +35,12 @@
     dest: "/home/{{ deploy_user_name }}/backups/docker{{ ansible_date_time.epoch }}.tar.gz"
     format: gz
     owner: "{{ deploy_user_name }}"
-  when: force_reinstall | default(false) | bool
-
-- name: Clear out docker directory
-  ansible.builtin.file:
-    path: "/home/{{ deploy_user_name }}/docker"
-    state: absent
-  when: force_reinstall | default(false) | bool
 
 - name: Create directory structure for Pangolin
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: 0744
+    mode: '0744'
     owner: "{{ deploy_user_name }}"
     group: "{{ deploy_user_name }}"
   loop:
@@ -51,39 +52,37 @@
     - /home/{{ deploy_user_name }}/docker/config/traefik/logs
     - /home/{{ deploy_user_name }}/docker/config/GeoLite2
     - /home/{{ deploy_user_name }}/docker/config/prometheus
-    - /home/{{ deploy_user_name }}/docker/config/prometheus/data
     - /home/{{ deploy_user_name }}/docker/config/grafana
-    - /home/{{ deploy_user_name }}/docker/config/grafana/data
 
 - name: Create data folder for prometheus
   ansible.builtin.file:
     path: /home/{{ deploy_user_name }}/docker/config/prometheus/data
     state: directory
-    owner: "nobody"
-    group: "nobody"
+    owner: nobody
+    group: nobody
 
 - name: Create data folder for grafana
   ansible.builtin.file:
     path: /home/{{ deploy_user_name }}/docker/config/grafana/data
     state: directory
-    owner: "472"
-    group: "472"
+    owner: 472
+    group: 472
 
 - name: Download Pangolin install script
   ansible.builtin.get_url:
-    url: "https://static.pangolin.net/get-installer.sh"
-    dest: "/home/{{ deploy_user_name }}/docker/install.sh"
+    url: https://static.pangolin.net/get-installer.sh
+    dest: /home/{{ deploy_user_name }}/docker/install.sh
     mode: '0755'
 
 - name: Run the install.sh script to create the installer
   ansible.builtin.command:
-    cmd: "/home/{{ deploy_user_name }}/docker/install.sh"
-    chdir: "/home/{{ deploy_user_name }}/docker"
+    cmd: /home/{{ deploy_user_name }}/docker/install.sh
+    chdir: /home/{{ deploy_user_name }}/docker
 
 - name: Run Pangolin install script
   ansible.builtin.expect:
-    command: "/home/{{ deploy_user_name }}/docker/installer"
-    chdir: "/home/{{ deploy_user_name }}/docker"
+    command: /home/{{ deploy_user_name }}/docker/installer
+    chdir: /home/{{ deploy_user_name }}/docker
     echo: true
     timeout: 300
     responses:
@@ -251,3 +250,8 @@
   ansible.builtin.command:
     cmd: docker compose ps
     chdir: /home/{{ deploy_user_name }}/docker
+
+- name: install crowdsec parser for jellyfin
+  ansible.builtin.command:
+    cmd: docker exec -it crowdsec cscli parsers install crowdsecurity/jellyfin-whitelist
+  ignore_errors: true
