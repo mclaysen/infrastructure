@@ -32,6 +32,9 @@
       community.general.timezone:
         name: "{{ timezone }}"
 
+    - name: Setup monitoring apps on host
+      ansible.builtin.import_tasks: vps-tunnel/tasks/apps.yml
+
     - name: Setup users
       ansible.builtin.import_tasks: vps-tunnel/tasks/user.yml
 

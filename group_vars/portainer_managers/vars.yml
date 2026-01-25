@@ -1,8 +1,12 @@
 # Non-secret configuration values
 timezone: America/New_York
 domain: mclaysen.com
+email_address: me@mclaysen.com
 username: mclaysen
 node_exporter_version: 1.10.2
 cadvisor_listen_ip: 172.17.0.1
 cadvisor_port: 8080
 cadvisor_version: 0.55.1
+
+# Pangolin installer configuration
+reverse_proxy_ip: 192.168.86.168

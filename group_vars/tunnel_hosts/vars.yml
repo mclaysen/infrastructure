@@ -39,7 +39,8 @@ firewall_ports:
   - 21820/udp
   - "{{ security_ssh_port }}/tcp"
 
-# Pangolin installer configuration
-pangolin_base_domain: example.com
-pangolin_dashboard_domain: pangolin.example.com
-pangolin_install_gerbil: yes
+#monitoring configs
+cadvisor_listen_ip: 172.17.0.1
+cadvisor_port: 8080
+cadvisor_version: 0.55.1
+node_exporter_version: 1.10.2
