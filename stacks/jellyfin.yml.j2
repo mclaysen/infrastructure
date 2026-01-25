@@ -14,7 +14,7 @@ services:
         target: /home_videos
     restart: 'unless-stopped'
     networks:
-      - jellyfin-network
+      - pangolin_network
 networks:
-  jellyfin-network:
-    driver: bridge
+  pangolin_network:
+    external: true

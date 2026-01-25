@@ -1,9 +1,21 @@
 services:
   newt:
-    image: fosrl/newt
+    image: fosrl/newt:1.8.1
     container_name: newt
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "pangolin.{{ domain }}:{{ vps_ip }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.{{ domain }}
       - NEWT_ID={{ newt_id }}
       - NEWT_SECRET={{ newt_secret }}
+      - DOCKER_SOCKET=unix:///var/run/docker.sock
+      - DNS=1.1.1.1
+    networks:
+      - pangolin_network
+networks:
+  pangolin_network:
+    external: true

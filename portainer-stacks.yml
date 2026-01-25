@@ -2,6 +2,8 @@
 - name: Prepare Stack Configurations
   hosts: container_manager
   become: true
+  handlers:
+    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
   vars_files:
     - group_vars/portainer_managers/vars.yml
   tasks:
@@ -18,6 +20,15 @@
         dest: "/home/{{ username }}/docker/monitoring/prometheus/prometheus.yml"
         mode: '0644'
 
+    - name: Deploy docker config
+      ansible.builtin.template:
+        src: container-manager/templates/docker_daemon.json.j2
+        dest: /etc/docker/daemon.json
+      notify: restart docker
+
+    - name: Deploy monitoring apps
+      ansible.builtin.import_tasks: container-manager/tasks/apps.yml
+
 - name: Manage Portainer stacks
   hosts: portainer_managers
   gather_facts: false
@@ -28,7 +39,7 @@
   vars:
     portainer_url: https://container-manager.mclaysen.com
     portainer_token: "{{ portainer_api_token }}"
-    endpoint_id: 1
+    endpoint_id: 3
     rendered_dir: /tmp/portainer-stacks
     stacks:
       - name: monitoring_stack
@@ -89,6 +100,19 @@
       loop_control:
         label: "{{ item.name }}"
       no_log: true
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Create network for Pangolin
+      bgtor.portainer.portainer_network:
+        portainer_url: "{{ portainer_url }}"
+        portainer_token: "{{ portainer_token }}"
+        name: pangolin_network
+        driver: bridge
+        endpoint_id: "{{ endpoint_id }}"
+        state: present
+        internal: false
       delegate_to: localhost
       become: false
       run_once: true
