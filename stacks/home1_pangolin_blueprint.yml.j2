@@ -1,0 +1,63 @@
+public-resources:
+  media-stats:
+    name: Jellyfin Media Stats
+    protocol: http
+    full-domain: media-stats.{{ domain }}
+    host-header: media-stats.{{ domain }}
+    tls-server-name: media-stats.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+  prometheus:
+    name: Prometheus
+    protocol: http
+    full-domain: prometheus.{{ domain }}
+    host-header: prometheus.{{ domain }}
+    tls-server-name: prometheus.{{ domain }}
+    targets:
+      - site: vps-local
+        hostname: prometheus
+        method: http
+        port: 9090
+    auth: 
+      sso-enabled: true
+      sso-roles:
+        - Member
+      sso-users:
+        - "{{ email_address }}"
+  vps-dashboard:
+    name: VPS Dashboard
+    protocol: http
+    full-domain: vps-dashboard.{{ domain }}
+    host-header: vps-dashboard.{{ domain }}
+    tls-server-name: vps-dashboard.{{ domain }}
+    targets:
+      - site: vps-local
+        hostname: grafana
+        method: http
+        port: 3000
+  media:
+    name: Jellyfin Media
+    protocol: http
+    full-domain: media.{{ domain }}
+    host-header: media.{{ domain }}
+    tls-server-name: media.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+    rules:
+      - action: allow
+        match: country
+        value: US
+        priority: 1
+    auth: 
+      sso-enabled: true
+      sso-roles:
+        - Member
+      sso-users:
+        - "{{ email_address }}"
+      

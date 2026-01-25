@@ -8,12 +8,14 @@ services:
       - "pangolin.{{ domain }}:{{ vps_ip }}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/{{ username }}/docker/newt/config/home1_pangolin_blueprint.yml:/app/config/home1_pangolin_blueprint.yml
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.{{ domain }}
       - NEWT_ID={{ newt_id }}
       - NEWT_SECRET={{ newt_secret }}
       - DOCKER_SOCKET=unix:///var/run/docker.sock
       - DNS=1.1.1.1
+      - BLUEPRINT_FILE=/app/config/home1_pangolin_blueprint.yml
     networks:
       - pangolin_network
 networks:

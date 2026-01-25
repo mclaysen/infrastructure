@@ -1,0 +1,62 @@
+---
+- name: Deploy Pangolin blueprints
+  hosts: container_manager
+  become: true
+  vars_files:
+    - group_vars/portainer_managers/vars.yml
+    - group_vars/portainer_managers/vault.yml
+  vars:
+    portainer_url: https://container-manager.mclaysen.com
+    portainer_token: "{{ portainer_api_token }}"
+    endpoint_id: 3
+    name: newt
+    stack_type: standalone
+    rendered_dir: /tmp/portainer-stacks
+  tasks:
+
+    - name: Update the Pangolin blueprints
+      ansible.builtin.template:
+        src: stacks/home1_pangolin_blueprint.yml.j2
+        dest: /home/{{ username }}/docker/newt/config/home1_pangolin_blueprint.yml
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0644'
+        
+    - name: Render compose templates for stacks
+      ansible.builtin.template:
+        src: stacks/newt.yml.j2
+        dest: "{{ rendered_dir }}/{{ name }}.yml"
+      no_log: true
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Deploy or update Portainer stacks from compose files
+      bgtor.portainer.portainer_stack:
+        portainer_url: "{{ portainer_url }}"
+        portainer_token: "{{ portainer_token }}"
+        name: "{{name}}"
+        stack_type: "{{ stack_type }}"
+        stack_source: file
+        endpoint_id: "{{ endpoint_id }}"
+        file: "{{ rendered_dir }}/newt.yml"
+        state: stopped
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Deploy or update Portainer stacks from compose files
+      bgtor.portainer.portainer_stack:
+        portainer_url: "{{ portainer_url }}"
+        portainer_token: "{{ portainer_token }}"
+        name: "{{name}}"
+        stack_type: "{{ stack_type }}"
+        stack_source: file
+        endpoint_id: "{{ endpoint_id }}"
+        file: "{{ rendered_dir }}/newt.yml"
+        state: started
+      delegate_to: localhost
+      become: false
+      run_once: true
+- ansible.builtin.import_playbook:
+    pangolin-blueprint-deploy.yml
