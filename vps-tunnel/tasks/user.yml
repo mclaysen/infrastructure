@@ -3,10 +3,10 @@
   ansible.builtin.user:
     name: "{{ deploy_user_name }}"
     state: present
-    comment: "Deploy User"
+    comment: Deploy User
     shell: /bin/bash
     create_home: yes
-    groups: "wheel"
+    groups: wheel
     append: yes
 
 - name: Create ssh directory for user
