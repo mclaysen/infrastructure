@@ -7,6 +7,8 @@ email_address: me@mclaysen.com
 deploy_user_name: deployUser
 deployuser_ssh_public_key_path: ~/.ssh/rack_nerd_vps1.pub
 
+sudoers_file_path: /etc/sudoers
+
 security_ssh_config_path: /etc/ssh/sshd_config
 security_sshd_name: sshd
 

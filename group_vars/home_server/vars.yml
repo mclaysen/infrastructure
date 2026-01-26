@@ -1,0 +1,35 @@
+user_name: mclaysen
+deployuser_ssh_public_key_path: ~/.ssh/home_sever.pub
+
+#monitoring configs
+cadvisor_listen_ip: 172.17.0.1
+cadvisor_port: 8080
+cadvisor_version: 0.55.1
+node_exporter_version: 1.10.2
+
+sudoers_file_path: /etc/sudoers.d/ansible-file
+
+security_ssh_config_path: /usr/etc/ssh/sshd_config
+security_sshd_name: sshd
+
+security_ssh_port: 22
+security_ssh_password_authentication: "no"
+security_ssh_permit_root_login: "no"
+security_ssh_usedns: "no"
+security_ssh_permit_empty_password: "no"
+security_ssh_challenge_response_auth: "no"
+security_ssh_gss_api_authentication: "no"
+security_ssh_x11_forwarding: "yes"
+security_sshd_state: started
+security_ssh_restart_handler_state: restarted
+security_ssh_allowed_users: 
+  - "{{ user_name }}"
+security_ssh_allowed_groups: []
+
+security_sudoers_passwordless:
+  - "{{ user_name }}"
+security_sudoers_passworded: []
+
+security_autoupdate_enabled: true
+security_autoupdate_blacklist: []
+security_autoupdate_additional_origins: []
