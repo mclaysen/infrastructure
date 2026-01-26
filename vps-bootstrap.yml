@@ -39,7 +39,7 @@
       ansible.builtin.import_tasks: vps-tunnel/tasks/user.yml
 
     - name: Configure SSH security
-      ansible.builtin.import_tasks: vps-tunnel/tasks/ssh.yml
+      ansible.builtin.import_tasks: shared/tasks/ssh.yml
 
     - name: Configure firewall
       ansible.builtin.import_tasks: vps-tunnel/tasks/firewall.yml

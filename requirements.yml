@@ -7,3 +7,4 @@ collections:
   - name: community.docker
   - name: community.general
   - name: prometheus.prometheus
+  - name: grafana.grafana
