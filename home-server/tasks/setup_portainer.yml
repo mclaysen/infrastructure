@@ -1,0 +1,9 @@
+- name: Render and deploy Portainer
+  ansible.builtin.template:
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '0744'
+  loop:
+    - { src: "./templates/portainer.yml.j2", dest: "/home/{{ user_name }}/docker/portainer/config/portainer.yml" } 

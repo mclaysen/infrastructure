@@ -1,0 +1,8 @@
+---
+- name: Install Node Exporter
+  ansible.builtin.include_role:
+    name: geerlingguy.node_exporter
+
+- name: Setup consul
+  ansible.builtin.include_role:
+    name: prometheus.prometheus.cadvisor

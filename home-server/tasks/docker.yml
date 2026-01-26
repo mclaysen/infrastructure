@@ -1,0 +1,47 @@
+---
+- name: Install Docker
+  community.general.zypper:
+    name: 
+      - docker 
+      - docker-compose 
+      - docker-compose-switch
+    state: present
+  
+- name: Start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create a data container
+  community.docker.docker_container:
+    name: hello-world
+    image: hello-world
+    state: present
+
+- name: Display Docker hello-world output
+  ansible.builtin.debug:
+    var: docker_hello_world.stdout
+
+- name: Assign user to docker group
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    groups: docker
+    append: yes
+
+- name: Deploy docker config
+  ansible.builtin.template:
+    src: ../templates/docker_daemon.json.j2
+    dest: /etc/docker/daemon.json
+  notify: restart docker
+
+- name: Create docker directory
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0744'
+    owner: "{{ user_name }}"
+    group: "{{ user_name }}"
+  loop:
+    - /home/{{ user_name }}/docker
+    - /home/{{ user_name }}/docker/portainer/config

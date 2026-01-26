@@ -1,0 +1,23 @@
+---
+- name: Config home server
+  hosts: home_server
+  vars_files:
+    - group_vars/home_server/vars.yml
+  handlers:
+    - ansible.builtin.import_tasks: home-server/handlers/main.yml
+  tasks:
+    - name: Update all packages
+      community.general.zypper:
+        name: "*"
+        state: latest
+        update_cache: true
+    
+    - name: Setup SSH
+      ansible.builtin.import_tasks: shared/tasks/ssh.yml
+
+    - name: Setup monitoring apps on host
+      ansible.builtin.import_tasks: home-server/tasks/apps.yml
+    
+    - name: Install Docker
+      ansible.builtin.import_tasks: home-server/tasks/docker.yml
+  
