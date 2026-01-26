@@ -32,7 +32,7 @@ services:
     depends_on:
       - prometheus
   unpoller:
-    image: ghcr.io/unpoller/unpoller:v2.21.0
+    image: ghcr.io/unpoller/unpoller:v2.24.0
     restart: unless-stopped
     ports:
       - '9130:9130'
