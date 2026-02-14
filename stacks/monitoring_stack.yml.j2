@@ -32,7 +32,7 @@ services:
     depends_on:
       - prometheus
   unpoller:
-    image: ghcr.io/unpoller/unpoller:v2.24.0
+    image: ghcr.io/unpoller/unpoller:v2.33.0
     restart: unless-stopped
     ports:
       - '9130:9130'
@@ -43,15 +43,16 @@ services:
       - UP_UNIFI_DYNAMIC=false
       - UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130
       - UP_PROMETHEUS_NAMESPACE=unpoller
-      - UP_UNIFI_CONTROLLER_0_PASS={{ unifi_unpoller_password }}
-      - UP_UNIFI_CONTROLLER_0_SAVE_ALARMS=true
-      - UP_UNIFI_CONTROLLER_0_SAVE_ANOMALIES=true
-      - UP_UNIFI_CONTROLLER_0_SAVE_DPI=true
-      - UP_UNIFI_CONTROLLER_0_SAVE_EVENTS=true
-      - UP_UNIFI_CONTROLLER_0_SAVE_IDS=true
-      - UP_UNIFI_CONTROLLER_0_SAVE_SITES=true
-      - UP_UNIFI_CONTROLLER_0_URL=https://192.168.86.1
-      - UP_UNIFI_CONTROLLER_0_USER={{ unifi_unpoller_user }}
+      - UP_PROMETHEUS_DISABLE=false
+      - UP_UNIFI_DEFAULT_SAVE_ALARMS=true
+      - UP_UNIFI_DEFAULT_SAVE_ANOMALIES=true
+      - UP_UNIFI_DEFAULT_SAVE_DPI=true
+      - UP_UNIFI_DEFAULT_SAVE_EVENTS=true
+      - UP_UNIFI_DEFAULT_SAVE_IDS=true
+      - UP_UNIFI_DEFAULT_SAVE_SITES=true
+      - UP_UNIFI_DEFAULT_PASS={{ unifi_unpoller_password }}
+      - UP_UNIFI_DEFAULT_URL={{ unifi_url }}
+      - UP_UNIFI_DEFAULT_USER={{ unifi_unpoller_user }}
     networks:
       - monitoring-network
 volumes:

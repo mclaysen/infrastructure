@@ -45,3 +45,8 @@
   loop:
     - /home/{{ user_name }}/docker
     - /home/{{ user_name }}/docker/portainer/config
+
+- name: Allow forwarding on virbr0 via firewalld direct rule
+  ansible.builtin.command: >
+    firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i virbr0 -j ACCEPT
+  become: true
