@@ -105,10 +105,10 @@
       "Would you like to install and start the containers":
         - "yes"
       "Would you like to run Pangolin as Docker or Podman":
-        - "docker"
-        - "docker"
-        - "docker"
-        - "docker"
+        - docker
+        - docker
+        - docker
+        - docker
       "Would you like to install CrowdSec":
         - "yes"
       "Are you willing to manage CrowdSec":
@@ -132,7 +132,7 @@
 - name: Convert httpChallenge to dnsChallenge with Cloudflare provider
   ansible.builtin.replace:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
-    regexp: '(\s+)httpChallenge:\n\s+entryPoint:\s+web'
+    regexp: (\s+)httpChallenge:\n\s+entryPoint:\s+web
     replace: '\1dnsChallenge:\n\1  provider: cloudflare'
   
 - name: Update the traefik dynamic config with the cloudflare config for the domain
@@ -163,7 +163,7 @@
 - name: Open up port 8082 for the prometheus connector
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
-    insertafter: '^\s+-\s+80:80'
+    insertafter: ^\s+-\s+80:80
     marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS"
     state: absent
     block: |
@@ -171,7 +171,7 @@
           - 8082:8082
           {% endfilter %}
 
-- name: Open up port 8082 fon traefik
+- name: Open up port 8082 for traefik
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
     insertafter: '^entryPoints:'
