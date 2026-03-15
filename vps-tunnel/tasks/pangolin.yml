@@ -12,15 +12,6 @@
     path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
   register: docker_compose_stat
 
-- name: Stop docker containers
-  community.docker.docker_compose_v2:
-    project_src: "/home/{{ deploy_user_name }}/docker"
-    state: absent
-    remove_orphans: true
-    remove_images: all
-    check_files_existing: false
-  when: docker_compose_stat.stat.exists
-
 - name: Create backup directory
   ansible.builtin.file:
     path: "/home/{{ deploy_user_name }}/backups"
@@ -32,7 +23,7 @@
 - name: gzip and backup configs
   ansible.builtin.archive:
     path: "/home/{{ deploy_user_name }}/docker"
-    dest: "/home/{{ deploy_user_name }}/backups/docker{{ ansible_date_time.epoch }}.tar.gz"
+    dest: "/home/{{ deploy_user_name }}/backups/docker{{ ansible_facts.date_time.epoch }}.tar.gz"
     format: gz
     owner: "{{ deploy_user_name }}"
 
@@ -73,11 +64,13 @@
     url: https://static.pangolin.net/get-installer.sh
     dest: /home/{{ deploy_user_name }}/docker/install.sh
     mode: '0755'
+  when: not docker_compose_stat.stat.exists
 
 - name: Run the install.sh script to create the installer
   ansible.builtin.command:
     cmd: /home/{{ deploy_user_name }}/docker/install.sh
     chdir: /home/{{ deploy_user_name }}/docker
+  when: not docker_compose_stat.stat.exists
 
 - name: Run Pangolin install script
   ansible.builtin.expect:
@@ -118,16 +111,12 @@
       "Would you like to update the MaxMind database":
         - "no"
   register: pangolin_install_output
+  when: not docker_compose_stat.stat.exists
 
 - name: Display installer output
   ansible.builtin.debug:
     var: pangolin_install_output.stdout_lines
   when: pangolin_install_output.stdout is defined
-
-- name: Stop docker containers
-  community.docker.docker_compose_v2:
-    project_src: "/home/{{ deploy_user_name }}/docker"
-    state: stopped
   
 - name: Convert httpChallenge to dnsChallenge with Cloudflare provider
   ansible.builtin.replace:
@@ -148,28 +137,13 @@
                 - "*.{{ domain }}"
           {% endfilter %}
 
-
-- name: Update the docker compose file with the cloudflare api token
-  ansible.builtin.blockinfile:
-    path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
-    insertafter: '^\s+container_name: traefik'
-    marker: "# {mark} ANSIBLE MANAGED BLOCK CLOUDFLARE"
-    block: |
-          {% filter indent(width=4, first=true) %}
-          environment:
-            CLOUDFLARE_DNS_API_TOKEN: {{ cloudflare_dns_api_token }}
-          {% endfilter %}
-
-- name: Open up port 8082 for the prometheus connector
-  ansible.builtin.blockinfile:
-    path: "/home/{{ deploy_user_name }}/docker/docker-compose.yml"
-    insertafter: ^\s+-\s+80:80
-    marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS"
-    state: absent
-    block: |
-          {% filter indent(width=6, first=true) %}
-          - 8082:8082
-          {% endfilter %}
+- name: Deploy docker-compose.yml
+  ansible.builtin.template:
+    src: vps-tunnel/templates/docker-compose.yml.j2
+    dest: /home/{{ deploy_user_name }}/docker/docker-compose.yml
+    mode: '0644'
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
 
 - name: Open up port 8082 for traefik
   ansible.builtin.blockinfile:
@@ -181,6 +155,15 @@
           metrics:
             address: :8082
           {% endfilter %}
+
+- name: Set badger version for the trafik config
+  ansible.builtin.lineinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
+    insertafter: '^\s{6}moduleName: github.com\/fosrl\/badger\n'
+    firstmatch: true
+    regexp: '^\s{6}version:\sv+.*'
+    line: '      version: {{ badger_version }}'
+    backup: true
 
 - name: Add metrics for prometheus
   ansible.builtin.blockinfile:
@@ -207,11 +190,10 @@
     dest: "{{ item.dest }}"
     mode: '0744'
   loop:
-    - { src: "../templates/prometheus_config.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus.yml" }
-    - { src: "../templates/prometheus_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml" }
-    - { src: "../templates/grafana_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml" }
-    - { src: "../templates/maxmind_compose.yml.j2", dest: "/home/{{ deploy_user_name }}/docker/docker-compose-maxmind.yml" }
-
+    - { src: '../templates/prometheus_config.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus.yml' }
+    - { src: '../templates/prometheus_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml' }
+    - { src: '../templates/grafana_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml' }
+    - { src: '../templates/maxmind_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-maxmind.yml' }
 - name: Update MaxMind DB path in config.yml
   ansible.builtin.lineinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/config.yml"
@@ -229,22 +211,26 @@
   community.docker.docker_compose_v2:
     project_src: "/home/{{ deploy_user_name }}/docker"
     state: present
-    recreate: always
     files:
       - docker-compose-prometheus.yml
       - docker-compose-grafana.yml
       - docker-compose.yml
       - docker-compose-maxmind.yml
+  register: compose_result
 
-# - name: Start docker compose
-#   ansible.builtin.command:
-#     cmd: docker compose up -d
-#     chdir: /home/{{ deploy_user_name }}/docker
-
-- name: Ensure docker compose is running
-  ansible.builtin.command:
-    cmd: docker compose logs
-    chdir: /home/{{ deploy_user_name }}/docker
+- name: Verify that pangolin, traefik, and gerbil are healthy
+  ansible.builtin.assert:
+    that:
+      - pangolin.State == 'running'
+      - traefik.State == 'running'
+      - gerbil.State == 'running'
+  vars:
+    pangolin: >-
+      {{ compose_result.containers | selectattr("Service", "equalto", "pangolin") | first }}
+    traefik: >-
+      {{ compose_result.containers | selectattr("Service", "equalto", "traefik") | first }}
+    gerbil: >-
+      {{ compose_result.containers | selectattr("Service", "equalto", "gerbil") | first }}
 
 - name: Verify
   ansible.builtin.command:

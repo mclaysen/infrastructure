@@ -2,6 +2,7 @@
 - name: Install Node Exporter
   ansible.builtin.include_role:
     name: geerlingguy.node_exporter
+  when: not ansible_check_mode
 
 - name: Setup consul
   ansible.builtin.include_role:
