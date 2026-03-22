@@ -1,0 +1,58 @@
+---
+- name: Setup Grafana
+  hosts: tunnel_hosts
+  become: true
+  vars_files:
+    - group_vars/tunnel_hosts/vault.yml
+  tasks:
+    - name: Install requests for HTTP requests
+      ansible.builtin.pip:
+        name: requests
+        executable: pip3
+        state: present
+
+    - name: Install git
+      ansible.builtin.dnf:
+        name:
+          - git
+        state: present
+
+    - name: Create Grafana datasource
+      grafana.grafana.datasource:
+        grafana_url: '{{ grafana_url }}'
+        grafana_api_key: '{{ grafana_api_key }}'
+        state: present
+        dataSource:
+          name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+          uid: prometheus
+
+    - name: Get Crowdesc Dashboards from Git
+      ansible.builtin.git:
+        repo: https://github.com/crowdsecurity/grafana-dashboards.git
+        dest: /tmp/grafana-dashboards
+        version: master
+        force: true
+
+    - name: Replace data source in Crowdsec dashboards
+      ansible.builtin.replace:
+        path: /tmp/grafana-dashboards/dashboards_v5/Crowdsec Overview.json
+        regexp: \${DS_PROMETHEUS}
+        replace: prometheus
+
+    - name: Read Crowdsec dashboard file
+      ansible.builtin.slurp:
+        src: /tmp/grafana-dashboards/dashboards_v5/Crowdsec Overview.json
+      register: crowdsec_dashboard
+
+    - name: Import Crowdesc Dashboards to Grafana
+      grafana.grafana.dashboard:
+        grafana_url: '{{ grafana_url }}'
+        grafana_api_key: '{{ grafana_api_key }}'
+        state: present
+        dashboard:
+          overwrite: true
+          dashboard: "{{ crowdsec_dashboard.content | b64decode | from_json }}"
