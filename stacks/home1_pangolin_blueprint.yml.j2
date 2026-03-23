@@ -10,6 +10,23 @@ public-resources:
         hostname: {{reverse_proxy_ip}}
         method: https
         port: 443
+  alloy:
+    name: Alloy
+    protocol: http
+    full-domain: alloy.{{ domain }}
+    host-header: alloy.{{ domain }}
+    tls-server-name: alloy.{{ domain }}
+    targets:
+      - site: vps-local
+        hostname: alloy
+        method: http
+        port: 12345
+    auth:
+      sso-enabled: true
+      sso-roles:
+        - Member
+      sso-users:
+        - "{{ email_address }}"
   prometheus:
     name: Prometheus
     protocol: http

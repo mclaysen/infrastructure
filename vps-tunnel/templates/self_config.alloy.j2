@@ -1,0 +1,7 @@
+prometheus.exporter.self "alloy_metrics" {}
+
+prometheus.scrape "alloy_metrics" {
+    targets = prometheus.exporter.self.alloy_metrics.targets
+    scrape_interval = "60s"
+    forward_to = [prometheus.remote_write.default.receiver]
+}

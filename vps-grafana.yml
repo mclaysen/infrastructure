@@ -17,7 +17,7 @@
           - git
         state: present
 
-    - name: Create Grafana datasource
+    - name: Create Grafana datasource for prometheus
       grafana.grafana.datasource:
         grafana_url: '{{ grafana_url }}'
         grafana_api_key: '{{ grafana_api_key }}'
@@ -29,6 +29,18 @@
           url: http://prometheus:9090
           isDefault: true
           uid: prometheus
+
+    - name: Create Grafana datasource for Loki
+      grafana.grafana.datasource:
+        grafana_url: '{{ grafana_url }}'
+        grafana_api_key: '{{ grafana_api_key }}'
+        state: present
+        dataSource:
+          name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          uid: loki
 
     - name: Get Crowdesc Dashboards from Git
       ansible.builtin.git:

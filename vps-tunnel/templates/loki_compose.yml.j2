@@ -1,0 +1,22 @@
+services:
+    loki:
+        container_name: loki
+        image: grafana/loki:{{ loki_version }}
+        restart: unless-stopped
+        volumes:
+            - ./config/loki/loki-config.yml:/etc/loki/loki-config.yaml:ro
+            - loki-data:/loki
+        command: -config.file=/etc/loki/loki-config.yaml
+        ports:
+            - 3100
+            - 7946
+        healthcheck:
+            test: [ "CMD", "/usr/bin/loki", "-health" ]
+            start_period: 30s
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+  loki-data:
+    name: loki-data
