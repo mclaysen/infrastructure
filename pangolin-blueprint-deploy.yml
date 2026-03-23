@@ -40,23 +40,8 @@
         stack_source: file
         endpoint_id: "{{ endpoint_id }}"
         file: "{{ rendered_dir }}/newt.yml"
-        state: stopped
+        state: present
+        timeout: 300
       delegate_to: localhost
       become: false
       run_once: true
-
-    - name: Deploy or update Portainer stacks from compose files
-      bgtor.portainer.portainer_stack:
-        portainer_url: "{{ portainer_url }}"
-        portainer_token: "{{ portainer_token }}"
-        name: "{{name}}"
-        stack_type: "{{ stack_type }}"
-        stack_source: file
-        endpoint_id: "{{ endpoint_id }}"
-        file: "{{ rendered_dir }}/newt.yml"
-        state: started
-      delegate_to: localhost
-      become: false
-      run_once: true
-- ansible.builtin.import_playbook:
-    pangolin-blueprint-deploy.yml
