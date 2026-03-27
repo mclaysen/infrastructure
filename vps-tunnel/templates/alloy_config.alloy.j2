@@ -1,14 +1,27 @@
-local.file_match "local_files" {
-  path_targets = [{"__path__" = "/var/log/*.log"}]
+local.file_match "traefik" {
+  path_targets = [{"__path__" = "/var/log/traefik/*.log"}]
   sync_period = "5s"
 }
 
-loki.source.file "log_scrape" {
-  targets    = local.file_match.local_files.targets
-  forward_to = [loki.process.filter_logs.receiver]
-  tail_from_end = true
+loki.source.file "traefik" {
+  targets    = local.file_match.traefik.targets
+  forward_to = [loki.process.traefik.receiver]
 }
 
-loki.process "filter_logs" {
+loki.process "traefik" {
+  stage.static_labels {
+    values = {
+      job = "traefik",
+    }
+  }
   forward_to = [loki.write.default.receiver]
+}
+
+prometheus.scrape "example" {
+  // Collect metrics from the default listen address.
+  targets = [{
+    __address__ = "127.0.0.1:12345",
+  }]
+
+  forward_to = [prometheus.remote_write.default.receiver]
 }
