@@ -55,6 +55,17 @@ public-resources:
         hostname: grafana
         method: http
         port: 3000
+  mclaysen-website:
+    name: mclaysen.com website
+    protocol: http
+    full-domain: {{ domain }}
+    host-header: {{ domain }}
+    tls-server-name: {{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
   media:
     name: Jellyfin Media
     protocol: http
