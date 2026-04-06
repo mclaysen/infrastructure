@@ -1,0 +1,59 @@
+---
+- name: OG Pi Setup
+  hosts: og_pi
+  become: true
+  handlers:
+    - ansible.builtin.import_tasks: og_pi/handlers/main.yml
+  tasks: 
+    - name: Update all packages
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+        update_cache: true
+
+    - name: Install basic tools
+      ansible.builtin.apt:
+        name:
+          - rtl-433
+          - git
+          - supervisor
+        state: present
+    
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+    
+    - name: Configure SSH security
+      ansible.builtin.import_tasks: shared/tasks/ssh.yml
+
+    - name: Set 644 for the authorized_keys file
+      ansible.builtin.file:
+        path: "/home/{{ usename }}/.ssh/authorized_keys"
+        mode: '0644'
+    
+    - name: Set udev rules
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/10-rtl-sdr.rules
+        content: 'SUBSYSTEMS=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE:="0666"'
+        mode: '0644'
+      notify: reload udev rules
+    
+    - name: Create startup directory
+      ansible.builtin.file:
+        path: "/home/{{ usename }}/startup"
+        state: directory
+        mode: '0755'
+        owner: "{{ usename }}"
+    
+    - name: Update the supervisor
+
+
+
+    #- name: Clone Home Automation repo
+     # ansible.builtin.git:
+      #  repo: "https://github.com/mclaysen/HomeAutomation.git"
+       # dest: "/home/{{ usename }}/HomeAutomation"
+        # version: "main"
+        # force: true
+
+    

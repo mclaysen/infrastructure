@@ -1,0 +1,7 @@
+[program:mqtt]
+command=/home/{{ usename }}/startup/mqtt.sh
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/mqtt.err.log
+stdout_logfile=/var/log/mqtt.out.log
+environment=HOME="/home/{{ usename }}",USER="{{ usename }}"
