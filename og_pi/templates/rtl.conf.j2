@@ -1,0 +1,7 @@
+[program:rtl_433]
+command=/home/{{ username }}/startup/rtl433.sh
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/rtl433.err.log
+stdout_logfile=/var/log/rtl433.out.log
+environment=HOME="/home/{{ username }}",USER="{{ username }}"

@@ -4,6 +4,8 @@
   become: true
   handlers:
     - ansible.builtin.import_tasks: og_pi/handlers/main.yml
+  vars_files:
+    - ./group_vars/og_pi/vault.yml
   tasks: 
     - name: Update all packages
       ansible.builtin.apt:
@@ -17,6 +19,10 @@
           - rtl-433
           - git
           - supervisor
+          - python3-pip
+          - python3-venv
+          - mosquitto
+          - mosquitto-clients
         state: present
     
     - name: Set timezone
@@ -28,7 +34,7 @@
 
     - name: Set 644 for the authorized_keys file
       ansible.builtin.file:
-        path: "/home/{{ usename }}/.ssh/authorized_keys"
+        path: "/home/{{ username }}/.ssh/authorized_keys"
         mode: '0644'
     
     - name: Set udev rules
@@ -40,20 +46,65 @@
     
     - name: Create startup directory
       ansible.builtin.file:
-        path: "/home/{{ usename }}/startup"
+        path: "/home/{{ username }}/startup"
         state: directory
         mode: '0755'
-        owner: "{{ usename }}"
+        owner: "{{ username }}"
+
+    - name: Create home automation directory
+      ansible.builtin.file:
+        path: "/home/{{ username }}/HomeAutomation"
+        state: directory
+        mode: '0755'
+        owner: "{{ username }}"
+
+    - name: Clone Home Automation repo
+      ansible.builtin.git:
+        repo: https://github.com/mclaysen/HomeAutomation.git
+        dest: /home/{{ username }}/HomeAutomation
+        version: main
+        single_branch: true
+        depth: 1
+        force: true
     
-    - name: Update the supervisor
+    - name: Replace the config.ini file with the template
+      ansible.builtin.template:
+        src: ./og_pi/templates/config.ini.j2
+        dest: /home/{{ username }}/HomeAutomation/config.ini
+        mode: '0644'
+        owner: "{{ username }}"
 
+    - name: Setup python environment for Home Automation
+      ansible.builtin.pip:
+        requirements: /home/{{ username }}/HomeAutomation/requirements.txt
+        virtualenv: /home/{{ username }}/HomeAutomation/.venv
+        virtualenv_command: /usr/bin/python3 -m venv
 
+    - name: Save the shell scripts for supervisor
+      ansible.builtin.template:
+        src: "./og_pi/templates/{{ item.src }}"
+        dest: "/home/{{ username }}/startup/{{ item.dest }}"
+        mode: '0755'
+        owner: "{{ username }}"
+      loop:
+        - { src: "mqtt.sh.j2", dest: "mqtt.sh" } # yamllint disable-line rule:quoted-strings
+        - { src: "rtl.sh.j2", dest: "rtl433.sh" } # yamllint disable-line rule:quoted-strings
 
-    #- name: Clone Home Automation repo
-     # ansible.builtin.git:
-      #  repo: "https://github.com/mclaysen/HomeAutomation.git"
-       # dest: "/home/{{ usename }}/HomeAutomation"
-        # version: "main"
-        # force: true
+    - name: Update the supervisor with mqtt and rtl
+      ansible.builtin.template:
+        src: "./og_pi/templates/{{ item.src }}"
+        dest: "/etc/supervisor/conf.d/{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { src: "mqtt.conf.j2", dest: "mqtt.conf" } # yamllint disable-line rule:quoted-strings
+        - { src: "rtl.conf.j2", dest: "rtl.conf" } # yamllint disable-line rule:quoted-strings
 
+    - name: Load supervisor configs
+      community.general.supervisorctl:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - mqtt
+        - rtl_433
+      notify: restart supervisor
     

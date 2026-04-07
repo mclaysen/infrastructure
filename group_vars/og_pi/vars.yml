@@ -1,6 +1,6 @@
 timezone: America/Detroit
 
-usename: mclaysen
+username: mclaysen
 
 
 sudoers_file_path: /etc/sudoers
@@ -19,13 +19,15 @@ security_ssh_x11_forwarding: "no"
 security_sshd_state: started
 security_ssh_restart_handler_state: restarted
 security_ssh_allowed_users: 
-  - "{{ usename }}"
+  - "{{ username }}"
 security_ssh_allowed_groups: []
 
 security_sudoers_passwordless:
-  - "{{ usename }}"
+  - "{{ username }}"
 security_sudoers_passworded: []
 
 security_autoupdate_enabled: true
 security_autoupdate_blacklist: []
 security_autoupdate_additional_origins: []
+
+rtl_frequency: 433950000
