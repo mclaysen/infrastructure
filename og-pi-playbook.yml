@@ -37,6 +37,12 @@
         path: "/home/{{ username }}/.ssh/authorized_keys"
         mode: '0644'
     
+    - name: Start mosquitto
+      ansible.builtin.service:
+        name: mosquitto
+        state: started
+        enabled: true
+
     - name: Set udev rules
       ansible.builtin.copy:
         dest: /etc/udev/rules.d/10-rtl-sdr.rules
@@ -79,6 +85,7 @@
         requirements: /home/{{ username }}/HomeAutomation/requirements.txt
         virtualenv: /home/{{ username }}/HomeAutomation/.venv
         virtualenv_command: /usr/bin/python3 -m venv
+      become_user: "{{ username }}"
 
     - name: Save the shell scripts for supervisor
       ansible.builtin.template:
