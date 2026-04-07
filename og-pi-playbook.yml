@@ -22,7 +22,7 @@
           - python3-pip
           - python3-venv
           - mosquitto
-          - mosquitto-clients
+          - mosquitto-clients # required for testing mqtt connection
         state: present
     
     - name: Set timezone
