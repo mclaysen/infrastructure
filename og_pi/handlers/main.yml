@@ -15,3 +15,11 @@
 
 - name: reload udev rules
   ansible.builtin.command: udevadm control --reload-rules
+
+- name: trigger udev rules
+  ansible.builtin.command: udevadm trigger --subsystem-match=usb
+
+- name: restart mqtt supervisor program
+  community.general.supervisorctl:
+    name: mqtt
+    state: restarted

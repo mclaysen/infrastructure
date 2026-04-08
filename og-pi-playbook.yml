@@ -37,6 +37,14 @@
         path: "/home/{{ username }}/.ssh/authorized_keys"
         mode: '0644'
     
+    - name: Create blacklist file for rtl_433
+      ansible.builtin.copy:
+        src: ./og_pi/files/blacklist-rtl-sdr.conf
+        dest: /etc/modprobe.d/blacklist-rtl-sdr.conf
+        mode: '0644'
+        owner: root
+        group: root
+
     - name: Start mosquitto
       ansible.builtin.service:
         name: mosquitto
@@ -48,7 +56,9 @@
         dest: /etc/udev/rules.d/10-rtl-sdr.rules
         content: 'SUBSYSTEMS=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE:="0666"'
         mode: '0644'
-      notify: reload udev rules
+      notify: 
+        - reload udev rules
+        - trigger udev rules
     
     - name: Create startup directory
       ansible.builtin.file:
@@ -72,6 +82,8 @@
         single_branch: true
         depth: 1
         force: true
+      notify: restart mqtt supervisor program
+      tags: [app_deployment]
     
     - name: Replace the config.ini file with the template
       ansible.builtin.template:
@@ -79,6 +91,9 @@
         dest: /home/{{ username }}/HomeAutomation/config.ini
         mode: '0644'
         owner: "{{ username }}"
+      become_user: "{{ username }}"
+      notify: restart mqtt supervisor program
+      tags: [app_deployment]
 
     - name: Setup python environment for Home Automation
       ansible.builtin.pip:
@@ -86,6 +101,8 @@
         virtualenv: /home/{{ username }}/HomeAutomation/.venv
         virtualenv_command: /usr/bin/python3 -m venv
       become_user: "{{ username }}"
+      notify: restart mqtt supervisor program
+      tags: [app_deployment]
 
     - name: Save the shell scripts for supervisor
       ansible.builtin.template:
@@ -109,9 +126,8 @@
     - name: Load supervisor configs
       community.general.supervisorctl:
         name: "{{ item }}"
-        state: present
+        state: started
       loop:
         - mqtt
         - rtl_433
-      notify: restart supervisor
     
