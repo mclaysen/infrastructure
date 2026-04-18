@@ -2,6 +2,7 @@ timezone: America/Detroit
 
 username: mclaysen
 
+git_repo_home_automation: https://github.com/mclaysen/HomeAutomation.git
 
 sudoers_file_path: /etc/sudoers
 

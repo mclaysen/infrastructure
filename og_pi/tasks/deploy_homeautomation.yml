@@ -1,0 +1,24 @@
+---
+- name: Clone Home Automation repo
+  ansible.builtin.git:
+    repo: "{{ git_repo_home_automation }}"
+    dest: "{{ destination }}"
+    version: main
+    single_branch: true
+    depth: 1
+    force: true
+
+- name: Replace the config.ini file with the template
+  ansible.builtin.template:
+    src: ./og_pi/templates/config.ini.j2
+    dest: "{{ destination }}/config.ini"
+    mode: '0644'
+    owner: "{{ username }}"
+  become_user: "{{ username }}"
+
+- name: Setup python environment for Home Automation
+  ansible.builtin.pip:
+    requirements: "{{ destination }}/requirements.txt"
+    virtualenv: "{{ destination }}/.venv"
+    virtualenv_command: /usr/bin/python3 -m venv
+  become_user: "{{ username }}"
