@@ -4,6 +4,7 @@
   become: true
   handlers:
     - ansible.builtin.import_tasks: og_pi/handlers/main.yml
+    - ansible.builtin.import_tasks: shared/handlers/main.yml
   vars_files:
     - ./group_vars/og_pi/vault.yml
   tasks: 

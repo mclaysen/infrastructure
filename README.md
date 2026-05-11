@@ -2,6 +2,22 @@
 
 Ansible project for managing infrastructure across Portainer-managed hosts and standalone Docker VPS hosts.
 
+# General Process Used
+
+1. Install the base OS on the machine
+1. Setup SSH to use a key
+   - ssh-keygen -t ed25519 -f {file location} -C "me@mclaysen.com"
+   - Add to the ssh config
+   ```txt
+   Host {name}
+    HostName {IP}
+    User {Username}
+    IdentityFile {key location}
+    ```
+   - Move public key to server
+    ``` ssh-copy-id -i ~/.ssh/my_custom_key.pub your_username@remote_host  ```
+
+
 ## Setup
 - Run the setup script to configure git hooks:
   ```bash
