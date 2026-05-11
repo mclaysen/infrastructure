@@ -5,6 +5,7 @@
     - group_vars/home_server/vars.yml
   handlers:
     - ansible.builtin.import_tasks: home-server/handlers/main.yml
+    - ansible.builtin.import_tasks: shared/handlers/main.yml
   tasks:
     - name: Update all packages
       community.general.zypper:
