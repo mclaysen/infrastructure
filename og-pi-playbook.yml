@@ -7,7 +7,7 @@
     - ansible.builtin.import_tasks: shared/handlers/main.yml
   vars_files:
     - ./group_vars/og_pi/vault.yml
-  tasks: 
+  tasks:
     - name: Update all packages
       ansible.builtin.apt:
         name: "*"
@@ -24,8 +24,14 @@
           - python3-venv
           - mosquitto
           - mosquitto-clients # required for testing mqtt connection
+          - ufw
         state: present
     
+    - name: Enable ufw
+      ansible.builtin.ufw:
+        state: enabled
+        policy: deny
+
     - name: Set timezone
       community.general.timezone:
         name: "{{ timezone }}"
