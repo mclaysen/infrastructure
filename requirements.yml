@@ -8,3 +8,5 @@ collections:
   - name: community.general
   - name: prometheus.prometheus
   - name: grafana.grafana
+  - name: nginxinc.nginx_core
+    version: 0.8.0

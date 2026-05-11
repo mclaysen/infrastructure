@@ -12,3 +12,4 @@ __pycache__/
 *.pyc
 .vault_pass
 /roles/*
+/collections/*
