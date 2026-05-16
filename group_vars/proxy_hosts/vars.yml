@@ -33,6 +33,9 @@ nginx_worker_processes: auto
 nginx_worker_connections: 768
 nginx_gzip_enabled: true
 
+certbot_email: me@mclaysen.com
+
+domain: mclaysen.com
 
 app_defaults:
   app_proxy_buffering: "off"
@@ -45,38 +48,38 @@ sites:
     settings:
       app_proxy_buffering: "on"
       app_max_body_size: 500M
-    ssl_cert_path: /etc/letsencrypt/live/photos.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/photos.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: homebridge
     app_domain: homebridge.mclaysen.com
     app_backend: http://192.168.86.108:8581
-    ssl_cert_path: /etc/letsencrypt/live/homebridge.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/homebridge.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: container-manager
     app_domain: container-manager.mclaysen.com
     app_backend: https://192.168.86.60:9443
-    ssl_cert_path: /etc/letsencrypt/live/container-manager.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/container-manager.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: nas2
     app_domain: nas2.mclaysen.com
     app_backend: https://192.168.86.103:5001
-    ssl_cert_path: /etc/letsencrypt/live/nas2.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/nas2.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: nas
     app_domain: nas.mclaysen.com
     app_backend: https://192.168.86.200
-    ssl_cert_path: /etc/letsencrypt/live/nas.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/nas.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: router
     app_domain: router.mclaysen.com
     app_backend: https://192.168.86.1
-    ssl_cert_path: /etc/letsencrypt/live/router.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/router.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: kvm
     app_domain: kvm.mclaysen.com
     app_backend: https://192.168.86.177
-    ssl_cert_path: /etc/letsencrypt/live/kvm.mclaysen.com/fullchain.pem
-    ssl_key_path: /etc/letsencrypt/live/kvm.mclaysen.com/privkey.pem
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   
 
   

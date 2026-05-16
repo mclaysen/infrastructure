@@ -40,6 +40,9 @@
       vars:
         nginx_branch: stable
 
+    - name: Setup certbot
+      ansible.builtin.import_tasks: proxy/tasks/certbot_conf.yml
+
     - name: Configure NGINX
       ansible.builtin.import_tasks: proxy/tasks/nginx_conf.yml
 

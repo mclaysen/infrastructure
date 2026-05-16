@@ -1,0 +1,27 @@
+---
+- name: Set Cloudflare API credentials
+  ansible.builtin.template:
+    src: ./proxy/templates/certbot_api_token.ini.j2
+    dest: /etc/letsencrypt/certbot_api_token.ini
+    mode: '0600'
+
+- name: Obtain SSL certificates with Certbot
+  ansible.builtin.command: >
+    certbot certonly --non-interactive --agree-tos --email {{ certbot_email }}
+    --dns-cloudflare --dns-cloudflare-credentials /etc/letsencrypt/certbot_api_token.ini
+    -d *.{{domain}}
+  register: certbot_result
+  failed_when: certbot_result.rc != 0 and 'Certificate not yet due for renewal' not in certbot_result.stderr
+
+- name: Debug Certbot output
+  ansible.builtin.debug:
+    var: certbot_result
+
+- name: Setup cron job for cert renewal
+  ansible.builtin.cron:
+    name: Renew Cloudflare certs via certbot
+    job: /usr/bin/certbot renew --quiet --dns-cloudflare --dns-cloudflare-credentials /etc/letsencrypt/certbot_api_token.ini --post-hook "systemctl reload nginx"
+    user: root
+    minute: 0
+    hour: 5
+    
