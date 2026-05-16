@@ -1,0 +1,30 @@
+user nginx;
+worker_processes {{ nginx_worker_processes }};
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections {{ nginx_worker_connections }}
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log;
+    
+{% if nginx_gzip_enabled %}
+
+    gzip on;
+{% endif %}
+
+    inclue /etc/nginx/conf.d/*.conf;
+}
