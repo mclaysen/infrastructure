@@ -1,5 +1,5 @@
 upstream {{ app_name }}_backend {
-    server {{ app_backend | regex_replace('^https?://', '') }};
+    server {{ app_backend | regex_replace('^https?://', '') | regex_replace('/$', '') }};
     keepalive 32;
 }
 

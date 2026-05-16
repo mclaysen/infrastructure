@@ -3,7 +3,7 @@ log_format withxff '$remote_addr - $remote_user [$time_local] "$request" '
                   '"$http_user_agent" "$http_x_forwarded_for"';
 
 upstream {{ app_name }}_backend {
-    server {{ app_backend | regex_replace('^https?://', '') }};
+    server {{ app_backend | regex_replace('^https?://', '') | regex_replace('/$', '') }};
     keepalive 32;
 }
 
