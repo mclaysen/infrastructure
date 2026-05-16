@@ -14,3 +14,13 @@
   community.general.supervisorctl:
     name: mqtt
     state: restarted
+
+- name: restart mosquitto
+  ansible.builtin.service:
+    name: mosquitto
+    state: restarted
+
+- name: restart ufw
+  ansible.builtin.service:
+    name: ufw
+    state: restarted

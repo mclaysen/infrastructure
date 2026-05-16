@@ -1,0 +1,66 @@
+---
+- name: Open or close MQTT supervisor
+  hosts: og_pi
+  become: true
+  handlers:
+  - ansible.builtin.import_tasks: og_pi/handlers/main.yml
+  tasks:
+    - name: Set listener in the mosquitto.conf file to open for MQTT port
+      lineinfile:
+        dest: /etc/mosquitto/mosquitto.conf
+        regexp: ^listener
+        line: listener 1883 0.0.0.0
+        state: present
+        create: true
+        mode: '0644'
+      notify: restart mosquitto
+      when: open_close == "open"
+    
+    - name: Remove listener from the mosquitto.conf file to close MQTT port
+      lineinfile:
+        dest: /etc/mosquitto/mosquitto.conf
+        regexp: ^listener
+        state: absent
+        validate: mosquitto -c %s -v
+        mode: '0644'
+      notify: restart mosquitto
+      when: open_close == "close"
+
+    - name: Allow anonymous connections in the mosquitto.conf file to open MQTT port
+      lineinfile:
+        dest: /etc/mosquitto/mosquitto.conf
+        regexp: ^allow_anonymous
+        line: allow_anonymous true
+        state: present
+        create: true
+        mode: '0644'
+      notify: restart mosquitto
+      when: open_close == "open"
+
+    - name: Remove allow_anonymous from the mosquitto.conf file to close MQTT port
+      lineinfile:
+        dest: /etc/mosquitto/mosquitto.conf
+        regexp: ^allow_anonymous
+        state: absent
+        validate: mosquitto -c %s -v
+        mode: '0644'
+      notify: restart mosquitto
+      when: open_close == "close"
+
+    - name: open firewall for MQTT port
+      ansible.builtin.ufw:
+        rule: allow
+        port: 1883
+        proto: tcp
+      when: open_close == "open"
+      notify: restart ufw
+
+    - name: close firewall for MQTT port
+      ansible.builtin.ufw:
+        rule: deny
+        port: 1883
+        proto: tcp
+      when: open_close == "close"
+      notify: restart ufw
+
+    

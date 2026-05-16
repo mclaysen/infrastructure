@@ -7,7 +7,7 @@
     - ansible.builtin.import_tasks: shared/handlers/main.yml
   vars_files:
     - ./group_vars/og_pi/vault.yml
-  tasks: 
+  tasks:
     - name: Update all packages
       ansible.builtin.apt:
         name: "*"
@@ -24,8 +24,14 @@
           - python3-venv
           - mosquitto
           - mosquitto-clients # required for testing mqtt connection
+          - ufw
         state: present
     
+    - name: Enable ufw
+      ansible.builtin.ufw:
+        state: enabled
+        policy: deny
+
     - name: Set timezone
       community.general.timezone:
         name: "{{ timezone }}"
@@ -75,33 +81,10 @@
         mode: '0755'
         owner: "{{ username }}"
 
-    - name: Clone Home Automation repo
-      ansible.builtin.git:
-        repo: https://github.com/mclaysen/HomeAutomation.git
-        dest: /home/{{ username }}/HomeAutomation
-        version: main
-        single_branch: true
-        depth: 1
-        force: true
-      notify: restart mqtt supervisor program
-      tags: [app_deployment]
-    
-    - name: Replace the config.ini file with the template
-      ansible.builtin.template:
-        src: ./og_pi/templates/config.ini.j2
-        dest: /home/{{ username }}/HomeAutomation/config.ini
-        mode: '0644'
-        owner: "{{ username }}"
-      become_user: "{{ username }}"
-      notify: restart mqtt supervisor program
-      tags: [app_deployment]
-
-    - name: Setup python environment for Home Automation
-      ansible.builtin.pip:
-        requirements: /home/{{ username }}/HomeAutomation/requirements.txt
-        virtualenv: /home/{{ username }}/HomeAutomation/.venv
-        virtualenv_command: /usr/bin/python3 -m venv
-      become_user: "{{ username }}"
+    - name: Deploy Home Automation app
+      ansible.builtin.import_tasks: og_pi/tasks/deploy_homeautomation.yml
+      vars:
+        destination: /home/{{ username }}/HomeAutomation
       notify: restart mqtt supervisor program
       tags: [app_deployment]
 
