@@ -11,16 +11,15 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name {{ app_domain }};
+    server_name {{ app_domain }} ssl;
+    http2 on;
 
     ssl_certificate         {{ ssl_cert_path }};
     ssl_certificate_key     {{ ssl_key_path }};
     include /etc/nginx/snippets/ssl-params.conf;
     include /etc/nginx/snippets/security-headers.conf;
 
-    access_log /var/log/nginx/{{app_name}}_access.log main;
+    access_log /var/log/nginx/{{app_name}}_access.log;
     error_log /var/log/nginx/{{app_name}}_error.log warn;
 
     location / {
@@ -35,7 +34,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         
-        proxy_buffering {{ app_proxy_buffering }};
+        proxy_buffering "{{ app_proxy_buffering }}";
         client_max_body_size {{ app_max_body_size }};
     }
 }

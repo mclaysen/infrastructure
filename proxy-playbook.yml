@@ -6,6 +6,7 @@
     - group_vars/proxy_hosts/vars.yml
   handlers:
     - ansible.builtin.import_tasks: shared/handlers/main.yml
+    - ansible.builtin.import_tasks: proxy/handlers/main.yml
   tasks:
     - name: Update all packages
       ansible.builtin.apt:
@@ -30,3 +31,9 @@
         name: nginxinc.nginx
       vars:
         nginx_branch: stable
+
+    - name: Configure NGINX
+      ansible.builtin.import_tasks: proxy/tasks/nginx_conf.yml
+
+    - name: Configure NGINX sites
+      ansible.builtin.import_tasks: proxy/tasks/nginx_set_sites.yml

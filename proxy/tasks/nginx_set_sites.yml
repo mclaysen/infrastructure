@@ -1,0 +1,25 @@
+---
+- name: Deploy default nginx sites
+  ansible.builtin.template:
+    src: ./proxy/templates/proxy_default.conf.j2
+    dest: /etc/nginx/conf.d/{{ site.app_name }}.conf
+    mode: '0644'
+  loop: "{{ sites }}"
+  loop_control:
+    loop_var: site
+  vars:
+    site_settings: "{{ app_defaults | combine(site.settings | default({}), recursive=True) }}"
+    app_name: "{{ site.app_name }}"
+    app_backend: "{{ site.app_backend }}"
+    app_domain: "{{ site.app_domain }}"
+    ssl_cert_path: "{{ site.ssl_cert_path }}"
+    ssl_key_path: "{{ site.ssl_key_path }}"
+    app_proxy_buffering: "{{ site_settings.app_proxy_buffering }}"
+    app_max_body_size: "{{ site_settings.app_max_body_size }}"
+  notify: restart nginx
+
+- name: Test nginx configuration after deploying sites
+  ansible.builtin.command: nginx -t
+  register: nginx_test_sites
+  failed_when: "'successful' not in nginx_test_sites.stderr"
+  changed_when: false
