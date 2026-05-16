@@ -1,10 +1,11 @@
 ---
 roles:
   - name: geerlingguy.node_exporter
-
+  - name: nginxinc.nginx
 collections:
   - name: bgtor.portainer
   - name: community.docker
   - name: community.general
   - name: prometheus.prometheus
   - name: grafana.grafana
+  - name: ansible.posix

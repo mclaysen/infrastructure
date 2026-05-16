@@ -24,3 +24,9 @@
       ansible.builtin.file:
         path: "/home/{{ username }}/.ssh/authorized_keys"
         mode: '0644'
+
+    - name: Install NGINX
+      ansible.builtin.include_role:
+        name: nginxinc.nginx
+      vars:
+        nginx_branch: stable
