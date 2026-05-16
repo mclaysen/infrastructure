@@ -67,12 +67,12 @@ sites:
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: nas
     app_domain: nas.mclaysen.com
-    app_backend: http://192.168.86.200
+    app_backend: https://192.168.86.200:443
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: router
     app_domain: router.mclaysen.com
-    app_backend: http://192.168.86.1
+    app_backend: https://192.168.86.1:443
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: kvm
