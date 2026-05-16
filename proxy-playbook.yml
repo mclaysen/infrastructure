@@ -4,6 +4,7 @@
   become: true
   vars_files:
     - group_vars/proxy_hosts/vars.yml
+    - group_vars/proxy_hosts/vault.yml
   handlers:
     - ansible.builtin.import_tasks: shared/handlers/main.yml
     - ansible.builtin.import_tasks: proxy/handlers/main.yml
@@ -13,6 +14,13 @@
         name: "*"
         state: latest
         update_cache: true
+
+    - name: Install basic tools
+      ansible.builtin.apt:
+        name:
+          - certbot
+          - python3-certbot-dns-cloudflare
+        state: present
 
     - name: Set timezone
       community.general.timezone:
