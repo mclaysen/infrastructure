@@ -37,4 +37,16 @@ server {
         proxy_buffering {{ app_proxy_buffering }};
         client_max_body_size {{ app_max_body_size }};
     }
+    location /api/webhook {
+            proxy_pass http://{{ app_name }}_backend;
+            proxy_method POST;
+            proxy_set_header Host $host;
+
+            proxy_hide_header Content-Type;
+            add_header Content-Type text/plain;
+
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+    }
 }

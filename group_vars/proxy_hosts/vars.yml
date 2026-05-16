@@ -80,6 +80,24 @@ sites:
     app_backend: https://192.168.86.177
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
-  
+  - app_name: media-stats
+    app_domain: media-stats.mclaysen.com
+    app_backend: http://192.168.86.60:3000
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
+  - app_name: hass
+    app_domain: hass.mclaysen.com
+    app_backend: http://192.168.86.78:8123
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
+    custom: true
+  - app_name: media
+    app_domain: media.mclaysen.com
+    app_backend: http://192.168.86.60:8096
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
+    custom: true
+    settings:
+      app_max_body_size: 20M
 
   

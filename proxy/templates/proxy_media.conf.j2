@@ -1,0 +1,68 @@
+log_format withxff '$remote_addr - $remote_user [$time_local] "$request" '
+                  '$status $body_bytes_sent "$http_referer" '
+                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+upstream {{ app_name }}_backend {
+    server {{ app_backend | regex_replace('^https?://', '') }};
+    keepalive 32;
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name {{ app_domain }};
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    server_name {{ app_domain }} ssl;
+    http2 on;
+
+    ssl_certificate         {{ ssl_cert_path }};
+    ssl_certificate_key     {{ ssl_key_path }};
+
+    ssl_protocols TLSv1.3 TLSv1.2;
+
+    include /etc/nginx/snippets/security-headers.conf;
+
+    # Permissions policy. May cause issues with some clients
+     add_header Permissions-Policy "accelerometer=(), ambient-light-sensor=(), battery=(), bluetooth=(), camera=(), clipboard-read=(), display-capture=(), document-domain=(), encrypted-media=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), interest-cohort=(), keyboard-map=(), local-fonts=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(), serial=(), sync-xhr=(), usb=(), xr-spatial-tracking=()" always;
+
+    access_log /var/log/nginx/{{app_name}}_access.log withxff;
+    error_log /var/log/nginx/{{app_name}}_error.log warn;
+
+    # Content Security Policy
+    # See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+    # Enforces https content and restricts JS/CSS to origin
+    # External Javascript (such as cast_sender.js for Chromecast) must be whitelisted.
+    add_header Content-Security-Policy "default-src https: data: blob: ; img-src 'self' https://* ; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.youtube.com blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; font-src 'self'";
+    
+    location / {
+        # Proxy main Jellyfin traffic
+        proxy_pass http://{{ app_name }}_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Protocol $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+
+        # Disable buffering when the nginx proxy gets very resource heavy upon streaming
+        proxy_buffering {{ app_proxy_buffering }};
+        client_max_body_size {{ app_max_body_size }};
+    }
+
+    location /socket {
+        # Proxy Jellyfin Websockets traffic
+        proxy_pass http://{{ app_name }}_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Protocol $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+}

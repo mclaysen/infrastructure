@@ -7,6 +7,7 @@
   loop: "{{ sites }}"
   loop_control:
     loop_var: site
+  when: not(site.custom | default(false) | bool)
   vars:
     site_settings: "{{ app_defaults | combine(site.settings | default({}), recursive=True) }}"
     app_name: "{{ site.app_name }}"
@@ -16,6 +17,40 @@
     ssl_key_path: "{{ site.ssl_key_path }}"
     app_proxy_buffering: "{{ site_settings.app_proxy_buffering }}"
     app_max_body_size: "{{ site_settings.app_max_body_size }}"
+  notify: restart nginx
+
+- name: Deploy Home Assistant nginx site
+  ansible.builtin.template:
+    src: ./proxy/templates/proxy_hass.conf.j2
+    dest: /etc/nginx/conf.d/hass.conf
+    mode: '0644'
+  vars:
+    hass_site: "{{ (sites | selectattr('app_name', 'equalto', 'hass') | first) | default({}, true) }}"
+    hass_settings: "{{ hass_site | combine(app_defaults, recursive=True) | combine(hass_site.settings | default({}), recursive=True) }}"
+    app_name: "{{ hass_settings.app_name }}"
+    app_backend: "{{ hass_settings.app_backend }}"
+    app_domain: "{{ hass_settings.app_domain }}"
+    ssl_cert_path: "{{ hass_settings.ssl_cert_path }}"
+    ssl_key_path: "{{ hass_settings.ssl_key_path }}"
+    app_proxy_buffering: "{{ hass_settings.app_proxy_buffering }}"
+    app_max_body_size: "{{ hass_settings.app_max_body_size }}"
+  notify: restart nginx
+
+- name: Deploy Jellyfin media server site
+  ansible.builtin.template:
+    src: ./proxy/templates/proxy_media.conf.j2
+    dest: /etc/nginx/conf.d/media.conf
+    mode: '0644'
+  vars:
+    media_site: "{{ (sites | selectattr('app_name', 'equalto', 'media') | first) | default({}, true) }}"
+    media_settings: "{{ media_site | combine(app_defaults, recursive=True) | combine(media_site.settings | default({}), recursive=True) }}"
+    app_name: "{{ media_settings.app_name }}"
+    app_backend: "{{ media_settings.app_backend }}"
+    app_domain: "{{ media_settings.app_domain }}"
+    ssl_cert_path: "{{ media_settings.ssl_cert_path }}"
+    ssl_key_path: "{{ media_settings.ssl_key_path }}"
+    app_proxy_buffering: "{{ media_settings.app_proxy_buffering }}"
+    app_max_body_size: "{{ media_settings.app_max_body_size }}"
   notify: restart nginx
 
 - name: Test nginx configuration after deploying sites
