@@ -22,18 +22,18 @@
     pull: missing
 
 - name: Wait for Portainer to be healthy
-  uri:
+  ansible.builtin.uri:
     url: "http://localhost:{{ portainer_http_port }}/api/system/status"
     status_code: 200
     timeout: 30
   register: portainer_health
   until: portainer_health.status == 200
-  retries: 12
+  retries: 5
   delay: 10
   when: not ansible_check_mode
 
 - name: Initialize Portainer admin user
-  uri:
+  ansible.builtin.uri:
     url: "http://localhost:{{ portainer_http_port }}/api/users/admin/init"
     method: POST
     body_format: json

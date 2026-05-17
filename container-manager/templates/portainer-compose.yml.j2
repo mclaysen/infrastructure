@@ -5,10 +5,11 @@ services:
     restart: always
     # Expose Portainer UI and API
     ports:
-      - {{ portainer_http_port }}:9443
+      - {{ portainer_https_port }}:9443
+      - {{ portainer_http_port }}:9000
       - 8000:8000
     volumes:
-      - {{portaier_data_dir}}:/data
+      - {{portainer_data_dir}}:/data
       - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: json-file

@@ -20,9 +20,21 @@ portainer_image: portainer/portainer-ce
 portainer_tag: 2.41.1
 portainer_container_name: portainer
 portainer_data_dir: /opt/portainer/data
-portainer_http_port: 9443
+portainer_https_port: 9443
 portainer_agent_port: 9001
+portainer_http_port: 9000
+endpoint_id: 3
+portainer_manager_endpoint: http://192.168.86.202:9000 #https://container-manager.mclaysen.com
 
+#Cloudflared configuration
+cloudflared_version: 2026.5.0
+
+# Newt configuration
+newt_version: 1.8.1
+blueprint_file_path: /home/{{ username }}/docker/newt/config/home1_pangolin_blueprint.yml
+
+#Jellyfin
+jellyfin_version: 10.11.8
 
 ansible_user_name: ansible
 ansible_user_ssh_public_key_path: ~/.ssh/container-manager.pub

@@ -1,10 +1,10 @@
 services:
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v3.9.1
+    image: prom/prometheus:{{ prometheus_version }}
     restart: unless-stopped
     ports:
-      - 9090:9090
+      - {{ prometheus_host_port }}:9090
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

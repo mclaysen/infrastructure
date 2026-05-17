@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: jellyfin/jellyfin
+    image: jellyfin/jellyfin:{{ jellyfin_version }}
     container_name: jellyfin
     user: "1000:3004"
     ports:

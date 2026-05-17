@@ -3,9 +3,9 @@
   hosts: container_manager
   become: true
   handlers:
-    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
+    - ansible.builtin.import_tasks: ../handlers/main.yml
   vars_files:
-    - group_vars/portainer_managers/vars.yml
+    - ../../group_vars/portainer_managers/vars.yml
   tasks:
     - name: Create monitoring config directory
       ansible.builtin.file:
@@ -16,18 +16,18 @@
 
     - name: Place Prometheus configuration
       ansible.builtin.template:
-        src: stacks/prometheus_config.yml.j2
+        src: ../stacks/prometheus_config.yml.j2
         dest: "/home/{{ username }}/docker/monitoring/prometheus/prometheus.yml"
         mode: '0644'
 
     - name: Deploy docker config
       ansible.builtin.template:
-        src: container-manager/templates/docker_daemon.json.j2
+        src: ../../shared/templates/docker_daemon.json.j2
         dest: /etc/docker/daemon.json
       notify: restart docker
 
     - name: Deploy monitoring apps
-      ansible.builtin.import_tasks: container-manager/tasks/apps.yml
+      ansible.builtin.import_tasks: ../tasks/apps.yml
 
 - name: Manage Portainer stacks
   hosts: portainer_managers
@@ -35,52 +35,52 @@
   collections:
     - bgtor.portainer
   vars_files:
-    - group_vars/portainer_managers/vault.yml
+    - ../../group_vars/portainer_managers/vault.yml
+    - ../../group_vars/portainer_managers/vars.yml
   vars:
-    portainer_url: https://container-manager.mclaysen.com
+    portainer_url: "{{ portainer_manager_endpoint }}"
     portainer_token: "{{ portainer_api_token }}"
-    endpoint_id: 3
     rendered_dir: /tmp/portainer-stacks
     stacks:
       - name: monitoring_stack
-        template: stacks/monitoring_stack.yml.j2
+        template: ../stacks/monitoring_stack.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
       - name: jellyfin
-        template: stacks/jellyfin.yml.j2
+        template: ../stacks/jellyfin.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
       - name: jellystat
-        template: stacks/jellystat.yml.j2
+        template: ../stacks/jellystat.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
       - name: newt
-        template: stacks/newt.yml.j2
+        template: ../stacks/newt.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
       - name: cloudflared
-        template: stacks/cloudflared.yml.j2
+        template: ../stacks/cloudflared.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
       - name: mclaysen_website
-        template: stacks/mclaysen_website.yml.j2
+        template: ../stacks/mclaysen_website.yml.j2
         stack_type: standalone
-        endpoint_id: 3
+        endpoint_id: "{{ endpoint_id }}"
         env: []
         prune: true
         pull_images: true
@@ -106,7 +106,6 @@
       loop: "{{ stacks | selectattr('template', 'defined') | list }}"
       loop_control:
         label: "{{ item.name }}"
-      no_log: true
       delegate_to: localhost
       become: false
       run_once: true
