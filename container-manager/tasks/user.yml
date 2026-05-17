@@ -1,0 +1,24 @@
+---
+- name: Create users
+  ansible.builtin.user:
+    name: "{{ ansible_user_name }}"
+    state: present
+    comment: Ansible User
+    shell: /bin/bash
+    create_home: yes
+    groups: wheel
+    append: yes
+
+- name: Create ssh directory for user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user_name }}/.ssh"
+    state: directory
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0700"
+
+- name: Import authorized keys for user
+  ansible.builtin.authorized_key:
+    user: "{{ ansible_user_name }}"
+    state: present
+    key: "{{ lookup('file', ansible_user_ssh_public_key_path) }}"
