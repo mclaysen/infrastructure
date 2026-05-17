@@ -54,5 +54,7 @@ cadvisor_port: 8080
 cadvisor_version: 0.55.1
 node_exporter_version: 1.10.2
 
+docker_metrics_addr: 172.17.0.1:9323
+
 #grafana configs
 grafana_url: http://vps-dashboard.{{ domain }}
