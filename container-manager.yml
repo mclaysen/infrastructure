@@ -1,26 +1,35 @@
 ---
-name: Container manager
-hosts: container_manager
-become: true
-vars_files:
-  - group_vars/container_manager/vault.yml
-handlers:
-  - ansible.builtin.import_tasks: container-manager/handlers/main.yml
-  - ansible.builtin.import_tasks: shared/handlers/main.yml
-tasks:
-    - name: Update all packages
-      ansible.builtin.dnf:
-        name: "*"
-        state: latest
-        update_cache: true
-        allowerasing: true
+- name: Container manager
+  hosts: container_manager
+  become: true
+  vars_files:
+    - group_vars/portainer_managers/vars.yml
+    - group_vars/portainer_managers/vault.yml
+  handlers:
+    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
+    - ansible.builtin.import_tasks: shared/handlers/main.yml
+  tasks:
+      - name: Update all packages
+        ansible.builtin.dnf:
+          name: "*"
+          state: latest
+          update_cache: true
+          allowerasing: true
 
-    - name: Set timezone
-      community.general.timezone:
-        name: "{{ timezone }}"
+      - name: Set timezone
+        community.general.timezone:
+          name: "{{ timezone }}"
 
-    - name: Configure SSH security
-      ansible.builtin.import_tasks: shared/tasks/ssh.yml
+      - name: Setup users
+        ansible.builtin.import_tasks: container-manager/tasks/user.yml
 
-    - name: Install Docker
-      ansible.builtin.import_tasks: shared/tasks/docker.yml
+      - name: Configure SSH security
+        ansible.builtin.import_tasks: shared/tasks/ssh.yml
+
+      - name: Install Docker
+        ansible.builtin.import_tasks: shared/tasks/docker.yml
+        vars:
+          deploy_user_name: "{{ ansible_user_name }}"
+
+      - name: Setup portainer
+        ansible.builtin.import_tasks: container-manager/tasks/portainer_setup.yml

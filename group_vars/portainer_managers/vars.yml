@@ -15,6 +15,17 @@ unifi_url: https://192.168.86.1
 
 docker_metrics_addr: 0.0.0.0:9323
 
+# Portainer configuration
+portainer_image: portainer/portainer-ce
+portainer_tag: 2.41.1
+portainer_container_name: portainer
+portainer_data_dir: /opt/portainer/data
+portainer_http_port: 9443
+portainer_agent_port: 9001
+
+
+ansible_user_name: ansible
+ansible_user_ssh_public_key_path: ~/.ssh/container-manager.pub
 
 sudoers_file_path: /etc/sudoers
 
@@ -32,11 +43,11 @@ security_ssh_x11_forwarding: "no"
 security_sshd_state: started
 security_ssh_restart_handler_state: restarted
 security_ssh_allowed_users: 
-  - "{{ deploy_user_name }}"
+  - "{{ ansible_user_name }}"
 security_ssh_allowed_groups: []
 
 security_sudoers_passwordless:
-  - "{{ deploy_user_name }}"
+  - "{{ ansible_user_name }}"
 security_sudoers_passworded: []
 
 security_autoupdate_enabled: true

@@ -1,0 +1,21 @@
+services:
+  portainer:
+    image: {{ portainer_image }}:{{ portainer_tag }}
+    container_name: {{ portainer_container_name }}
+    restart: always
+    # Expose Portainer UI and API
+    ports:
+      - {{ portainer_http_port }}:9443
+      - 8000:8000
+    volumes:
+      - {{portaier_data_dir}}:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: portainer_network

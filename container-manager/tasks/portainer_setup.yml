@@ -1,0 +1,64 @@
+---
+- name: Create Portainer data directory
+  file:
+    path: "{{ portainer_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create Portainer docker-compose file
+  ansible.builtin.template:
+    src: container-manager/templates/portainer-compose.yml.j2
+    dest: "{{ portainer_data_dir | dirname }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy Portainer container
+  community.docker.docker_compose_v2:
+    project_src: "{{ portainer_data_dir | dirname }}"
+    state: present
+    pull: missing
+
+- name: Wait for Portainer to be healthy
+  uri:
+    url: "http://localhost:{{ portainer_http_port }}/api/system/status"
+    status_code: 200
+    timeout: 30
+  register: portainer_health
+  until: portainer_health.status == 200
+  retries: 12
+  delay: 10
+  when: not ansible_check_mode
+
+- name: Initialize Portainer admin user
+  uri:
+    url: "http://localhost:{{ portainer_http_port }}/api/users/admin/init"
+    method: POST
+    body_format: json
+    body:
+      Username: "{{ portainer_admin_username }}"
+      Password: "{{ portainer_admin_password }}"
+    status_code: [200, 409]  # 409 = already initialized
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - portainer_init_admin | default(true)
+
+- name: Pull Portainer Agent image
+  community.docker.docker_image:
+    name: "portainer/agent:{{ portainer_tag }}"
+    source: pull
+
+- name: Deploy Portainer Agent
+  community.docker.docker_container:
+    name: portainer_agent
+    image: "portainer/agent:{{ portainer_tag }}"
+    restart_policy: always
+    ports:
+      - "{{ portainer_agent_port }}:9001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    state: started
