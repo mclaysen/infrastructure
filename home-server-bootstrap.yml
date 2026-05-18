@@ -1,0 +1,23 @@
+---
+- name: Bootstrap home server
+  hosts: home_server
+  gather_facts: false
+  become: true
+  vars_files:
+    - group_vars/home_server/vars.yml
+  handlers:
+    - ansible.builtin.import_tasks: shared/handlers/main.yml
+  pre_tasks:
+    - name: Ensure Python 3 is installed
+      ansible.builtin.raw: test -e /usr/bin/python3 || dnf -y install python3
+      changed_when: false
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+  tasks:
+    - name: Create deploy user and SSH access
+      ansible.builtin.import_tasks: home-server/tasks/user.yml
+
+    - name: Configure SSH security
+      ansible.builtin.import_tasks: shared/tasks/ssh.yml

@@ -1,17 +1,20 @@
 ---
 - name: Config home server
   hosts: home_server
+  become: true
   vars_files:
     - group_vars/home_server/vars.yml
   handlers:
-    - ansible.builtin.import_tasks: home-server/handlers/main.yml
     - ansible.builtin.import_tasks: shared/handlers/main.yml
   tasks:
     - name: Update all packages
-      community.general.zypper:
+      ansible.builtin.dnf:
         name: "*"
         state: latest
         update_cache: true
+
+    - name: Setup users
+      ansible.builtin.import_tasks: home-server/tasks/user.yml
     
     - name: Setup SSH
       ansible.builtin.import_tasks: shared/tasks/ssh.yml
@@ -20,5 +23,7 @@
       ansible.builtin.import_tasks: home-server/tasks/apps.yml
     
     - name: Install Docker
-      ansible.builtin.import_tasks: home-server/tasks/docker.yml
+      ansible.builtin.import_tasks: shared/tasks/docker.yml
+      vars:
+        deploy_user_name: "{{ deploy_user_name }}"
   

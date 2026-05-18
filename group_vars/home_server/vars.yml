@@ -1,4 +1,5 @@
-user_name: mclaysen
+deploy_user_name: mclaysen
+user_name: "{{ deploy_user_name }}"
 deployuser_ssh_public_key_path: ~/.ssh/home_sever.pub
 
 #monitoring configs
@@ -9,7 +10,7 @@ node_exporter_version: 1.10.2
 
 sudoers_file_path: /etc/sudoers.d/ansible-file
 
-security_ssh_config_path: /usr/etc/ssh/sshd_config
+security_ssh_config_path: /etc/ssh/sshd_config
 security_sshd_name: sshd
 
 security_ssh_port: 22
