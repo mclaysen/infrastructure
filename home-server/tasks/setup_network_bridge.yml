@@ -1,0 +1,6 @@
+---
+- name: Create bridge connection for libvirt
+  ansible.builtin.command: nmcli connection add type bridge ifname br0 con-name br0
+  register: nmcli_add_bridge_result
+  failed_when: false
+  changed_when: nmcli_add_bridge_result.rc == 0
