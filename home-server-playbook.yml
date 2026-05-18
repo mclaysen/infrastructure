@@ -12,18 +12,20 @@
         name: "*"
         state: latest
         update_cache: true
+        allowerasing: true
 
-    - name: Setup users
-      ansible.builtin.import_tasks: home-server/tasks/user.yml
-    
-    - name: Setup SSH
-      ansible.builtin.import_tasks: shared/tasks/ssh.yml
+    - name: Install basic tools
+      ansible.builtin.dnf:
+        name:
+          - nano
+        state: present
 
-    - name: Setup monitoring apps on host
-      ansible.builtin.import_tasks: home-server/tasks/apps.yml
-    
-    - name: Install Docker
-      ansible.builtin.import_tasks: shared/tasks/docker.yml
-      vars:
-        deploy_user_name: "{{ deploy_user_name }}"
-  
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+
+    - name: Setup cockpit
+      ansible.builtin.import_tasks: home-server/tasks/setup_cockpit.yml
+
+    - name: Setup libvirt
+      ansible.builtin.import_tasks: home-server/tasks/initialize_libvirt.yml

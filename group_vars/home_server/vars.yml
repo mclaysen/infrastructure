@@ -1,6 +1,14 @@
-deploy_user_name: mclaysen
+deploy_user_name: ansible
 user_name: "{{ deploy_user_name }}"
-deployuser_ssh_public_key_path: ~/.ssh/home_sever.pub
+deployuser_ssh_public_key_path: ~/.ssh/home-server.pub
+
+timezone: America/Detroit
+
+libvirt_storage_pools:
+  - name: fast
+    path: /var/lib/libvirt/images-fast
+  - name: bulk
+    path: /var/lib/libvirt/images-bulk
 
 #monitoring configs
 cadvisor_listen_ip: 172.17.0.1
