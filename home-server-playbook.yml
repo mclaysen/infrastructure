@@ -19,6 +19,7 @@
       ansible.builtin.dnf:
         name:
           - nano
+          - usbutils
         state: present
 
     - name: Set timezone

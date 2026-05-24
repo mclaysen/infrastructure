@@ -99,6 +99,9 @@
     import: true
     networks:
       - network: "{{ vm_network_bridge_name }}"
+    host_devices:
+      - type: usb
+        name: "{{ home_assistant_usb_host_device }}"
     state: present
     autostart: true
     boot: uefi
