@@ -1,0 +1,39 @@
+<domain type='kvm'>
+  <name>{{ home_assistant_vm_name }}</name>
+  <memory unit='MiB'>{{ home_assistant_memory_mb }}</memory>
+  <currentMemory unit='MiB'>{{ home_assistant_memory_mb }}</currentMemory>
+  <vcpu placement='static'>{{ home_assistant_vcpus }}</vcpu>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='{{ home_assistant_machine_type }}'>hvm</type>
+    <firmware>
+      <feature enabled='no' name='secure-boot'/>
+      <feature enabled='no' name='enrolled-keys'/>
+    </firmware>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough'/>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ home_assistant_disk_path }}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <interface type='network'>
+      <mac address='{{ home_assistant_mac_address }}'/>
+      <source network='{{ vm_network_bridge_name }}'/>
+      <model type='virtio'/>
+    </interface>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <hostdev mode='subsystem' type='usb' managed='yes'>
+      <source>
+        <address type='usb' bus='{{ home_assistant_usb_bus }}' device='{{ home_assistant_usb_device }}'/>
+      </source>
+    </hostdev>
+  </devices>
+</domain>
