@@ -10,6 +10,12 @@ libvirt_storage_pools:
   - name: bulk
     path: /var/lib/libvirt/images-bulk
 
+# Bridge network configuration
+bridge_network_name: br0
+bridge_interface_name: br0-slave-enp4s0
+ethernet_ifname: enp4s0
+vm_network_bridge_name: vm-bridge
+
 #monitoring configs
 cadvisor_listen_ip: 172.17.0.1
 cadvisor_port: 8080

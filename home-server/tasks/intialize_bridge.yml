@@ -1,0 +1,53 @@
+---
+- name: Initialize the bridge network
+  community.general.nmcli:
+    conn_name: "{{ bridge_network_name }}"
+    ifname: "{{ bridge_network_name }}"
+    type: bridge
+    state: present
+    autoconnect: yes
+    method4: disabled
+    method6: disabled
+
+- name: Add ethernet interface to bridge
+  community.general.nmcli:
+    conn_name: "{{ bridge_interface_name }}"
+    ifname: "{{ ethernet_ifname }}"
+    type: ethernet
+    master: "{{ bridge_network_name }}"
+    slave_type: bridge
+    state: present
+    autoconnect: yes
+    method4: disabled
+    method6: disabled
+
+- name: ensure bridge network is available
+  ansible.builtin.command: "nmcli connection show {{ bridge_network_name }}"
+  register: bridge_network_info
+  changed_when: false
+  failed_when: bridge_network_info.rc != 0
+
+- name: Gather facts about networks
+  community.libvirt.virt_net:
+    command: facts
+
+- name: Check if bridge network is defined in libvirt
+  ansible.builtin.set_fact:
+    bridge_network_defined: "{{ vm_network_bridge_name in (ansible_facts.ansible_libvirt_networks | default({})) }}"
+
+- name: attach bridge network to libvirt
+  community.libvirt.virt_net:
+    command: define
+    name: "{{ vm_network_bridge_name }}"
+    xml: "{{ lookup('template', 'home-server/templates/network.xml.j2') }}"
+  when: not bridge_network_defined
+
+- name: start the network
+  community.libvirt.virt_net:
+    state: active
+    name: "{{ vm_network_bridge_name }}"
+
+- name: set the network to autostart
+  community.libvirt.virt_net:
+    autostart: true
+    name: "{{ vm_network_bridge_name }}"
