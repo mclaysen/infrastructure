@@ -29,3 +29,6 @@
 
     - name: Setup libvirt
       ansible.builtin.import_tasks: home-server/tasks/initialize_libvirt.yml
+
+    - name: Initialize VM bridge
+      ansible.builtin.import_tasks: home-server/tasks/intialize_bridge.yml

@@ -10,3 +10,5 @@ collections:
   - name: grafana.grafana
   - name: nginxinc.nginx_core
     version: 0.8.0
+  - name: community.libvirt
+    version: 2.2.0
