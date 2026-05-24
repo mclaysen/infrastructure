@@ -32,13 +32,11 @@
   loop_control:
     label: "{{ item.name }}"
 
-- name: Convert xml templates to pool definitions
-  ansible.builtin.template:
-    src: home-server/templates/pool_config.xml.j2
-    dest: "/etc/libvirt/storage/{{ item.name }}.xml"
-    owner: root
-    group: root
-    mode: "0644"
+- name: Define storage pools
+  community.libvirt.virt_pool:
+    command: define
+    name: "{{ pool_name }}"
+    xml: "{{ lookup('template', 'home-server/templates/pool_config.xml.j2') }}"
   loop: "{{ libvirt_storage_pools }}"
   loop_control:
     label: "{{ item.name }}"
@@ -46,40 +44,43 @@
     pool_name: "{{ item.name }}"
     pool_path: "{{ item.path }}"
 
-- name: Check libvirt storage pool state
-  ansible.builtin.command: "virsh pool-info {{ item.name }}"
-  register: libvirt_pool_info
-  changed_when: false
-  failed_when: false
+- name: Check if pools have already been defined and are active
+  community.libvirt.virt_pool:
+    command: facts
+  register: pool_facts
+
+- name: Determine which storage pools need to be defined
+  ansible.builtin.set_fact:
+    pools_to_define: "{{ (pools_to_define | default([])) + [item] }}"
+  loop: "{{ libvirt_storage_pools }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in (pool_facts.ansible_facts.ansible_libvirt_pools | default({}))
+
+- name: Define missing storage pools
+  community.libvirt.virt_pool:
+    command: define
+    name: "{{ pool_name }}"
+    xml: "{{ lookup('template', 'home-server/templates/pool_config.xml.j2') }}"
+  loop: "{{ pools_to_define | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    pool_name: "{{ item.name }}"
+    pool_path: "{{ item.path }}"
+
+- name: Ensure storage pools are active
+  community.libvirt.virt_pool:
+    state: active
+    name: "{{ item.name }}"
   loop: "{{ libvirt_storage_pools }}"
   loop_control:
     label: "{{ item.name }}"
 
-- name: Define libvirt storage pools
-  ansible.builtin.command: "virsh pool-define /etc/libvirt/storage/{{ item.item.name }}.xml"
-  when: item.rc != 0
-  loop: "{{ libvirt_pool_info.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-
-- name: Refresh libvirt storage pool state
-  ansible.builtin.command: "virsh pool-info {{ item.name }}"
-  register: libvirt_pool_current_info
-  changed_when: false
+- name: Set storage pools to autostart
+  community.libvirt.virt_pool:
+    autostart: true
+    name: "{{ item.name }}"
   loop: "{{ libvirt_storage_pools }}"
   loop_control:
     label: "{{ item.name }}"
-
-- name: Start libvirt storage pools
-  ansible.builtin.command: "virsh pool-start {{ item.item.name }}"
-  when: item.stdout is not search('State:\\s+running')
-  loop: "{{ libvirt_pool_current_info.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-
-- name: Mark libvirt storage pools for autostart
-  ansible.builtin.command: "virsh pool-autostart {{ item.item.name }}"
-  when: item.stdout is not search('Autostart:\\s+yes')
-  loop: "{{ libvirt_pool_current_info.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
