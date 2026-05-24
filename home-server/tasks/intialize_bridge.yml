@@ -21,6 +21,38 @@
     method4: disabled
     method6: disabled
 
+- name: Get active connection on bridge interface ethernet port
+  ansible.builtin.command: "nmcli -g GENERAL.CONNECTION device show {{ ethernet_ifname }}"
+  register: ethernet_active_connection
+  changed_when: false
+
+- name: Disable autoconnect on conflicting standalone ethernet profile
+  ansible.builtin.command: "nmcli connection modify {{ ethernet_active_connection.stdout }} connection.autoconnect no"
+  when:
+    - ethernet_active_connection.stdout | length > 0
+    - ethernet_active_connection.stdout != bridge_interface_name
+  register: disable_conflicting_ethernet_profile
+  changed_when: disable_conflicting_ethernet_profile.rc == 0
+
+- name: Deactivate conflicting standalone ethernet profile
+  ansible.builtin.command: "nmcli connection down {{ ethernet_active_connection.stdout }}"
+  when:
+    - ethernet_active_connection.stdout | length > 0
+    - ethernet_active_connection.stdout != bridge_interface_name
+  register: down_conflicting_ethernet_profile
+  changed_when: down_conflicting_ethernet_profile.rc == 0
+
+- name: Activate bridge slave profile on ethernet port
+  ansible.builtin.command: "nmcli connection up {{ bridge_interface_name }}"
+  register: bridge_slave_activation
+  changed_when: bridge_slave_activation.rc == 0 and ('successfully activated' in (bridge_slave_activation.stdout | lower) or 'activated' in (bridge_slave_activation.stdout | lower))
+
+- name: Verify ethernet port is attached to bridge profile
+  ansible.builtin.command: "nmcli -g GENERAL.CONNECTION device show {{ ethernet_ifname }}"
+  register: ethernet_bridge_connection
+  changed_when: false
+  failed_when: ethernet_bridge_connection.stdout != bridge_interface_name
+
 - name: ensure bridge network is available
   ansible.builtin.command: "nmcli connection show {{ bridge_network_name }}"
   register: bridge_network_info
