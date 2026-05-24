@@ -10,11 +10,22 @@ libvirt_storage_pools:
   - name: bulk
     path: /var/lib/libvirt/images-bulk
 
+# General vm configs
+vm_images_cache_dir: /var/cache/libvirt/images
+vm_pool_name_fast: fast
+vm_pool_name_bulk: bulk
+vm_network_bridge_name: vm-bridge
+
+# Home assistant vm configs
+home_assistant_base_image: https://github.com/home-assistant/operating-system/releases/download/17.3/haos_ova-17.3.qcow2.xz
+home_assistant_base_image_checksum: sha256:d42fadf806c0690792a4460ff3a72c2846c4e16e2033aefad0835662e7a9696f
+home_assistant_disk_path: /var/lib/libvirt/images-fast/home-assistant.qcow2
+
 # Bridge network configuration
 bridge_network_name: br0
 bridge_interface_name: br0-slave-enp4s0
 ethernet_ifname: enp4s0
-vm_network_bridge_name: vm-bridge
+
 
 #monitoring configs
 cadvisor_listen_ip: 172.17.0.1

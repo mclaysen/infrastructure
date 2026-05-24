@@ -1,0 +1,134 @@
+- name: Ensure VM image cache directory exists
+  ansible.builtin.file:
+    path: "{{ vm_images_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - home_assistant_vm
+
+- name: Gather defined VMs
+  community.libvirt.virt:
+    command: list_vms
+  register: defined_vms
+  tags:
+    - home_assistant_vm
+
+- name: Check whether the Home Assistant disk already exists
+  ansible.builtin.stat:
+    path: "{{ home_assistant_disk_path }}"
+  register: home_assistant_disk
+  tags:
+    - home_assistant_vm
+
+- name: Download HAOS image archive
+  ansible.builtin.get_url:
+    url: "{{ home_assistant_base_image }}"
+    dest: "{{ vm_images_cache_dir }}/{{ home_assistant_base_image | basename }}"
+    checksum: "{{ home_assistant_base_image_checksum }}"
+    mode: "0644"
+  when: not home_assistant_disk.stat.exists
+  tags:
+    - home_assistant_vm
+
+- name: Extract HAOS qcow2
+  ansible.builtin.command:
+    cmd: >-
+      xz -dkf {{ vm_images_cache_dir }}/{{ home_assistant_base_image | basename }}
+  args:
+    creates: "{{ vm_images_cache_dir }}/{{ home_assistant_base_image | basename | regex_replace('\\.xz$', '') }}"
+  when: not home_assistant_disk.stat.exists
+  tags:
+    - home_assistant_vm
+
+- name: Stop if Home Assistant VM exists without its disk
+  ansible.builtin.fail:
+    msg: >-
+      Libvirt domain home-assistant-prod exists, but its disk is missing at
+      {{ home_assistant_disk_path }}. Restore the disk or remove the domain
+      before rerunning this task.
+  when:
+    - not home_assistant_disk.stat.exists
+    - "'home-assistant-prod' in defined_vms.list_vms"
+  tags:
+    - home_assistant_vm
+
+- name: Stop on orphaned Home Assistant disk
+  ansible.builtin.fail:
+    msg: >-
+      Home Assistant VM disk already exists at {{ home_assistant_disk_path }},
+      but libvirt does not have a defined domain named home-assistant-prod.
+      This usually means a previous create run partially succeeded. Remove the
+      orphaned disk or define the VM from it before rerunning this task.
+  when:
+    - home_assistant_disk.stat.exists
+    - "'home-assistant-prod' not in defined_vms.list_vms"
+  tags:
+    - home_assistant_vm
+
+- name: Copy base HAOS disk into place
+  ansible.builtin.copy:
+    src: "{{ vm_images_cache_dir }}/{{ home_assistant_base_image | basename | regex_replace('\\.xz$', '') }}"
+    dest: "{{ home_assistant_disk_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: not home_assistant_disk.stat.exists
+  tags:
+    - home_assistant_vm
+
+- name: Resize HAOS disk to 80G
+  ansible.builtin.command:
+    cmd: "qemu-img resize {{ home_assistant_disk_path }} 80G"
+  when: not home_assistant_disk.stat.exists
+  tags:
+    - home_assistant_vm
+
+- name: Create home assistant vm
+  community.libvirt.virt_install:
+    name: home-assistant-prod
+    disks:
+      - path: "{{ home_assistant_disk_path }}"
+        format: qcow2
+        snapshot: internal
+        bus: virtio
+    memory: 4096
+    vcpus: 2
+    import: true
+    networks:
+      - network: "{{ vm_network_bridge_name }}"
+    state: present
+    autostart: true
+    boot: uefi
+    boot_opts:
+      firmware:
+        feature0:
+          name: secure-boot
+          enabled: false
+        feature1:
+          name: enrolled-keys
+          enabled: false
+    osinfo:
+      name: linux2024
+  when: "'home-assistant-prod' not in defined_vms.list_vms"
+  tags:
+    - home_assistant_vm
+
+- name: Set the running vms
+  community.libvirt.virt:
+    command: list_vms
+    state: running
+  register: running_vms
+  tags: 
+    - home_assistant_vm
+
+- name: Ensure home assistant vm is running
+  community.libvirt.virt:
+    name: home-assistant-prod
+    state: running
+  when: "'home-assistant-prod' not in running_vms.ansible_facts.ansible_libvirt_vms"
+  tags:
+    - home_assistant_vm
+

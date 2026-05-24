@@ -4,6 +4,7 @@
   become: true
   vars_files:
     - group_vars/home_server/vars.yml
+    - group_vars/home_server/vault.yml
   handlers:
     - ansible.builtin.import_tasks: shared/handlers/main.yml
   tasks:
@@ -32,3 +33,6 @@
 
     - name: Initialize VM bridge
       ansible.builtin.import_tasks: home-server/tasks/intialize_bridge.yml
+
+    - name: Create home assistant vm
+      ansible.builtin.import_tasks: home-server/tasks/create_home_assistant.yml
