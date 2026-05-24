@@ -36,6 +36,10 @@ blueprint_file_path: /home/{{ username }}/docker/newt/config/home1_pangolin_blue
 #Jellyfin
 jellyfin_version: 10.11.8
 
+#monitoring stack
+prometheus_version: v3.9.1
+prometheus_host_port: 9091
+
 ansible_user_name: ansible
 ansible_user_ssh_public_key_path: ~/.ssh/container-manager.pub
 
