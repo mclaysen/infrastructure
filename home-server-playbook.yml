@@ -23,6 +23,7 @@
           - tcpdump
           - iproute
           - net-tools
+          - genisoimage
         state: present
 
     - name: Set timezone
@@ -40,3 +41,6 @@
 
     - name: Create home assistant vm
       ansible.builtin.import_tasks: home-server/tasks/create_home_assistant.yml
+
+    - name: Create reverse proxy vm
+      ansible.builtin.import_tasks: home-server/tasks/create_reverse_proxy.yml

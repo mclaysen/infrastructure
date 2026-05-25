@@ -1,0 +1,8 @@
+#cloud-config
+hostname: {{ reverse_proxy_host_name }}
+users:
+  - name: ansible
+    groups: [wheel]
+    ssh_authorized_keys:
+      - {{ proxy_ssh_pub_key }}
+    sudo: ALL=(ALL) NOPASSWD:ALL

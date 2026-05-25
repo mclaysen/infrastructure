@@ -1,0 +1,43 @@
+<domain type='kvm'>
+  <name>{{ reverse_proxy_vm_name }}</name>
+  <memory unit='MiB'>{{ reverse_proxy_memory_mb }}</memory>
+  <currentMemory unit='MiB'>{{ reverse_proxy_memory_mb }}</currentMemory>
+  <vcpu placement='static'>{{ reverse_proxy_vcpus }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='{{ reverse_proxy_machine_type }}'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough'/>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ reverse_proxy_disk_path }}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{{ reverse_proxy_seed_img_path }}'/>
+      <target dev='sda' bus='sata'/>
+      <readonly/>
+    </disk>
+    <interface type='network'>
+      <mac address='{{ reverse_proxy_mac_address }}'/>
+      <source network='{{ vm_network_bridge_name }}'/>
+      <model type='{{ reverse_proxy_network_model }}'/>
+    </interface>
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'/>
+    <video>
+      <model type='vga' vram='16384' heads='1'/>
+    </video>
+  </devices>
+</domain>

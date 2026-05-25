@@ -32,6 +32,20 @@ usb_devices:
   - bus: 1
     device: 3
 
+# Reverse proxy vm configs
+reverse_proxy_vm_name: proxy-prod
+reverse_proxy_host_name: reverse-proxy-prod
+reverse_proxy_seed_img_name: server-cloudimg.img
+reverse_proxy_base_image: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img
+reverse_proxy_base_image_checksum: sha256:53fdde898feed8b027d94baa9cfe8229867f330a1d9c49dc7d84465ee7f229f7
+reverse_proxy_disk_path: /var/lib/libvirt/images-bulk/reverse-proxy.qcow2
+reverse_proxy_memory_mb: 2048
+reverse_proxy_vcpus: 1
+reverse_proxy_machine_type: pc-q35-rhel10.0.0
+reverse_proxy_network_model: virtio
+reverse_proxy_mac_address: 52:54:00:7B:21:9E
+reverse_proxy_seed_img_path: /var/lib/libvirt/images-bulk/reverse_proxy_seed.img
+
 # Bridge network configuration
 bridge_network_name: br0
 bridge_interface_name: br0-slave-enp4s0
