@@ -13,6 +13,14 @@
     rendered_dir: /tmp/portainer-stacks
   tasks:
 
+    - name: Ensure rendered stacks directory exists
+      ansible.builtin.file:
+        path: "{{ blueprint_file_path | dirname }}"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0755'
+
     - name: Update the Pangolin blueprints
       ansible.builtin.template:
         src: ../stacks/home1_pangolin_blueprint.yml.j2
@@ -41,6 +49,10 @@
         file: "{{ rendered_dir }}/newt.yml"
         state: present
         timeout: 300
+      register: stack_result
+      until: stack_result is not failed
+      retries: 5
+      delay: 30
       delegate_to: localhost
       become: false
       run_once: true

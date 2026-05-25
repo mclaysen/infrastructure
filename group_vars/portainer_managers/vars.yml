@@ -2,7 +2,7 @@ timezone: America/Detroit
 
 domain: mclaysen.com
 email_address: me@mclaysen.com
-username: mclaysen
+username: ansible
 node_exporter_version: 1.10.2
 cadvisor_listen_ip: 172.17.0.1
 cadvisor_port: 8080
@@ -40,9 +40,6 @@ jellyfin_version: 10.11.8
 prometheus_version: v3.9.1
 prometheus_host_port: 9091
 
-ansible_user_name: ansible
-ansible_user_ssh_public_key_path: ~/.ssh/container-manager.pub
-
 sudoers_file_path: /etc/sudoers
 
 security_ssh_config_path: /etc/ssh/sshd_config
@@ -59,11 +56,11 @@ security_ssh_x11_forwarding: "no"
 security_sshd_state: started
 security_ssh_restart_handler_state: restarted
 security_ssh_allowed_users: 
-  - "{{ ansible_user_name }}"
+  - "{{ username }}"
 security_ssh_allowed_groups: []
 
 security_sudoers_passwordless:
-  - "{{ ansible_user_name }}"
+  - "{{ username }}"
 security_sudoers_passworded: []
 
 security_autoupdate_enabled: true
