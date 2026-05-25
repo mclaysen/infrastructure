@@ -1,6 +1,6 @@
 ---
 - name: Setup and configure proxy server
-  hosts: proxy_hosts_test
+  hosts: proxy_hosts
   become: true
   vars_files:
     - group_vars/proxy_hosts/vars.yml

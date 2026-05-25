@@ -1,11 +1,11 @@
 timezone: America/Detroit
 
-username: mclaysen
+username: ansible
 
 sudoers_file_path: /etc/sudoers
 
 security_ssh_config_path: /etc/ssh/sshd_config
-security_sshd_name: sshd
+security_sshd_name: ssh
 
 security_ssh_port: 22
 security_ssh_password_authentication: "no"
