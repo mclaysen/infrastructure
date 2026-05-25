@@ -37,5 +37,9 @@
       </source>
     </hostdev>
     {% endfor %}
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'/>
+    <video>
+      <model type='vga' vram='16384' heads='1'/>
+    </video>
   </devices>
 </domain>
