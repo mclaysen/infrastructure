@@ -1,0 +1,97 @@
+---
+- name: Ensure VM image cache directory exists
+  ansible.builtin.file:
+    path: "{{ vm_images_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - container_manager_vm
+
+- name: Check if the disk for the container manager VM already exists
+  ansible.builtin.stat:
+    path: "{{ container_manager_disk_path }}"
+  register: container_manager_disk
+  tags:
+    - container_manager_vm
+
+- name: Download the AlmaLinux cloud image
+  ansible.builtin.get_url:
+    url: "{{ container_manager_base_image }}"
+    dest: "{{ vm_images_cache_dir }}/{{ container_manager_seed_img_name }}"
+    checksum: "{{ container_manager_base_image_checksum }}"
+    mode: "0644"
+  when: not container_manager_disk.stat.exists
+  tags:
+    - container_manager_vm
+
+- name: Copy the container manager image to disk path
+  ansible.builtin.copy:
+    src: "{{ vm_images_cache_dir }}/{{ container_manager_seed_img_name }}"
+    dest: "{{ container_manager_disk_path }}"
+    remote_src: true
+    mode: "0644"
+  when: not container_manager_disk.stat.exists
+  tags:
+    - container_manager_vm
+
+- name: Extract the container manager seed user data
+  ansible.builtin.template:
+    src: home-server/templates/container_manager_seed.yml.j2
+    dest: "{{ vm_images_cache_dir }}/{{ container_manager_seed_user_name }}"
+    mode: "0644"
+  tags:
+    - container_manager_vm
+
+- name: Extract the container manager seed meta image
+  ansible.builtin.template:
+    src: home-server/templates/container_manager_meta.yml.j2
+    dest: "{{ vm_images_cache_dir }}/{{ container_manager_seed_meta_name }}"
+    mode: "0644"
+  tags:
+    - container_manager_vm
+
+- name: Create cloud-init ISO for container manager
+  ansible.builtin.command:
+    cmd: >-
+      genisoimage -output {{ container_manager_seed_img_path }} -volid cidata -joliet -rock -graft-points
+      user-data={{ vm_images_cache_dir }}/{{ container_manager_seed_user_name }}
+      meta-data={{ vm_images_cache_dir }}/{{ container_manager_seed_meta_name }}
+
+  tags:
+    - container_manager_vm
+
+- name: Resize the container manager image
+  ansible.builtin.command:
+    cmd: >-
+      qemu-img resize {{ container_manager_disk_path }} {{ container_manager_disk_size_gb | int }}G
+  when: not container_manager_disk.stat.exists
+  tags:
+    - container_manager_vm
+
+- name: Create container manager VM
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('template', 'home-server/templates/container_manager_domain.xml.j2') }}"
+    autostart: true
+    mutate_flags:
+      - ADD_UUID
+  tags:
+    - container_manager_vm
+
+- name: Set the running vms
+  community.libvirt.virt:
+    command: list_vms
+    state: running
+  register: running_vms
+  tags: 
+    - container_manager_vm
+
+- name: Ensure container manager vm is running
+  community.libvirt.virt:
+    name: "{{ container_manager_vm_name }}"
+    state: running
+  when: container_manager_vm_name not in (running_vms.list_vms | default([]))
+  tags:
+    - container_manager_vm

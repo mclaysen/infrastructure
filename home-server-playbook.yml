@@ -44,3 +44,6 @@
 
     - name: Create reverse proxy vm
       ansible.builtin.import_tasks: home-server/tasks/create_reverse_proxy.yml
+
+    - name: Create container manager vm
+      ansible.builtin.import_tasks: home-server/tasks/create_container_manager.yml

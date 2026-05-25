@@ -1,0 +1,11 @@
+#cloud-config
+hostname: {{ container_manager_host_name }}
+users:
+  - name: ansible
+    groups: [wheel]
+    ssh_authorized_keys:
+      - {{ container_manager_ssh_pub_key }}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+package_update: true
+packages:
+  - python3

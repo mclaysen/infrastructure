@@ -36,10 +36,10 @@
   tags:
     - reverse_proxy_vm
 
-- name: Extract the reverse proxy seed image
+- name: Extract the reverse proxy seed user data
   ansible.builtin.template:
     src: home-server/templates/reverse_proxy_seed.yml.j2
-    dest: "{{ vm_images_cache_dir }}/user-data"
+    dest: "{{ vm_images_cache_dir }}/{{ reverse_proxy_seed_user_name }}"
     mode: "0644"
   tags:
     - reverse_proxy_vm
@@ -47,7 +47,7 @@
 - name: Extract the reverse proxy seed meta image
   ansible.builtin.template:
     src: home-server/templates/reverse_proxy_meta.yml.j2
-    dest: "{{ vm_images_cache_dir }}/meta-data"
+    dest: "{{ vm_images_cache_dir }}/{{ reverse_proxy_seed_meta_name }}"
     mode: "0644"
   tags:
     - reverse_proxy_vm
@@ -55,16 +55,16 @@
 - name: Create cloud-init ISO for reverse proxy
   ansible.builtin.command:
     cmd: >-
-      genisoimage -output {{ reverse_proxy_seed_img_path }} -volid cidata -joliet -rock
-      {{ vm_images_cache_dir }}/user-data
-      {{ vm_images_cache_dir }}/meta-data
+      genisoimage -output {{ reverse_proxy_seed_img_path }} -volid cidata -joliet -rock -graft-points
+      user-data={{ vm_images_cache_dir }}/{{ reverse_proxy_seed_user_name }}
+      meta-data={{ vm_images_cache_dir }}/{{ reverse_proxy_seed_meta_name }}
   tags:
     - reverse_proxy_vm
 
 - name: Resize the reverse proxy image
   ansible.builtin.command:
     cmd: >-
-      qemu-img resize {{ reverse_proxy_disk_path }} 40G
+      qemu-img resize {{ reverse_proxy_disk_path }} {{ reverse_proxy_disk_size_gb | int }}G
   when: not reverse_proxy_disk.stat.exists
   tags:
     - reverse_proxy_vm
