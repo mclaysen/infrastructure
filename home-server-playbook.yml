@@ -20,6 +20,9 @@
         name:
           - nano
           - usbutils
+          - tcpdump
+          - iproute
+          - net-tools
         state: present
 
     - name: Set timezone
