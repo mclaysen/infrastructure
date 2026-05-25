@@ -25,15 +25,17 @@
     <interface type='network'>
       <mac address='{{ home_assistant_mac_address }}'/>
       <source network='{{ vm_network_bridge_name }}'/>
-      <model type='virtio'/>
+      <model type='{{ home_assistant_network_model }}'/>
     </interface>
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
+    {% for usb_device in usb_devices %}
     <hostdev mode='subsystem' type='usb' managed='yes'>
       <source>
-        <address type='usb' bus='{{ home_assistant_usb_bus }}' device='{{ home_assistant_usb_device }}'/>
+        <address type='usb' bus='{{ usb_device.bus }}' device='{{ usb_device.device }}'/>
       </source>
     </hostdev>
+    {% endfor %}
   </devices>
 </domain>

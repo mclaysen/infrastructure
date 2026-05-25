@@ -6,8 +6,9 @@
     type: bridge
     state: present
     autoconnect: yes
-    method4: disabled
-    method6: disabled
+    stp: "{{ bridge_stp_enabled }}"
+    method4: "{{ bridge_ipv4_method }}"
+    method6: "{{ bridge_ipv6_method }}"
 
 - name: Add ethernet interface to bridge
   community.general.nmcli:

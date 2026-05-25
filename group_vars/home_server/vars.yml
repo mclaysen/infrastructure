@@ -24,13 +24,21 @@ home_assistant_disk_path: /var/lib/libvirt/images-fast/home-assistant.qcow2
 home_assistant_memory_mb: 4096
 home_assistant_vcpus: 2
 home_assistant_machine_type: pc-q35-rhel10.0.0
-home_assistant_usb_host_device: usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0
+home_assistant_network_model: virtio
 home_assistant_mac_address: 02:42:AC:1C:6B:0A
+usb_devices:
+  - bus: 1
+    device: 4
+  - bus: 1
+    device: 3
 
 # Bridge network configuration
 bridge_network_name: br0
 bridge_interface_name: br0-slave-enp4s0
 ethernet_ifname: enp4s0
+bridge_stp_enabled: false
+bridge_ipv4_method: disabled
+bridge_ipv6_method: disabled
 
 
 #monitoring configs
