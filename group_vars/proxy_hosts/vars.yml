@@ -57,7 +57,7 @@ sites:
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: container-manager
     app_domain: container-manager.mclaysen.com
-    app_backend: https://192.168.86.60:9443
+    app_backend: https://192.168.86.202:9443
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: nas2
@@ -82,7 +82,7 @@ sites:
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: media-stats
     app_domain: media-stats.mclaysen.com
-    app_backend: http://192.168.86.60:3000
+    app_backend: http://192.168.86.202:3000
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: hass
@@ -93,10 +93,15 @@ sites:
     custom: true
   - app_name: media
     app_domain: media.mclaysen.com
-    app_backend: http://192.168.86.60:8096
+    app_backend: http://192.168.86.202:8096
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
     custom: true
+  - app_name: website
+    app_domain: mclaysen.com
+    app_backend: http://192.168.86.202:5001
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
     settings:
       app_max_body_size: 20M
 
