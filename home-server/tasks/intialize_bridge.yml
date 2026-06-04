@@ -28,7 +28,14 @@
   changed_when: false
 
 - name: Disable autoconnect on conflicting standalone ethernet profile
-  ansible.builtin.command: "nmcli connection modify {{ ethernet_active_connection.stdout }} connection.autoconnect no"
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - connection
+      - modify
+      - "{{ ethernet_active_connection.stdout | trim }}"
+      - connection.autoconnect
+      - "no"
   when:
     - ethernet_active_connection.stdout | length > 0
     - ethernet_active_connection.stdout != bridge_interface_name
@@ -36,7 +43,12 @@
   changed_when: disable_conflicting_ethernet_profile.rc == 0
 
 - name: Deactivate conflicting standalone ethernet profile
-  ansible.builtin.command: "nmcli connection down {{ ethernet_active_connection.stdout }}"
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - connection
+      - down
+      - "{{ ethernet_active_connection.stdout | trim }}"
   when:
     - ethernet_active_connection.stdout | length > 0
     - ethernet_active_connection.stdout != bridge_interface_name
