@@ -1,4 +1,20 @@
 ---
+- name: Gather current kernel command line
+  ansible.builtin.command:
+    cmd: cat /proc/cmdline
+  register: kernel_cmdline
+  changed_when: false
+
+- name: Ensure Intel IOMMU kernel args are configured
+  ansible.builtin.command:
+    cmd: >-
+      grubby --update-kernel=ALL
+      --args="{{ container_manager_kernel_iommu_args | join(' ') }}"
+  register: iommu_kernel_args
+  when: >-
+    (container_manager_kernel_iommu_args | default([])) |
+    difference(kernel_cmdline.stdout.split()) | length > 0
+
 - name: Setup modprobe config for vfio-pci
   ansible.builtin.copy:
     dest: /etc/modprobe.d/vfio.conf
@@ -23,10 +39,18 @@
 
 - name: Rebuild initramfs
   ansible.builtin.command: dracut -f
-  when: modprobe_vfio.changed or modules_load_vfio.changed
+  when: >-
+    modprobe_vfio.changed or
+    modules_load_vfio.changed or
+    (iommu_kernel_args is defined and iommu_kernel_args.changed)
 
 - name: Mark whether vfio reboot is required
   ansible.builtin.set_fact:
-    vfio_reboot_required: "{{ modprobe_vfio.changed or modules_load_vfio.changed }}"
+    vfio_reboot_required: >-
+      {{
+        modprobe_vfio.changed or
+        modules_load_vfio.changed or
+        (iommu_kernel_args is defined and iommu_kernel_args.changed)
+      }}
   
 

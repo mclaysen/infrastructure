@@ -28,11 +28,11 @@ home_assistant_network_model: virtio
 home_assistant_mac_address: 02:42:AC:1C:6B:0A
 usb_devices:
   - bus: 1
+    device: 3 #zwave adapter
+  - bus: 1
     device: 4 #zwave adapter
   - bus: 1
-    device: 6 #zwave adapter
-  - bus: 1
-    device: 2 #bluetooth adapter
+    device: 7 #bluetooth adapter
 
 # Reverse proxy vm configs
 reverse_proxy_vm_name: proxy-prod
@@ -71,6 +71,9 @@ container_manager_disk_size_gb: 300
 container_manager_gpu_ids:
   - 10de:1d01
   - 10de:0fb8
+container_manager_kernel_iommu_args:
+  - intel_iommu=on
+  - iommu=pt
 container_manager_pci_devices:
   - domain: "0x0000"
     bus: "0x01"
