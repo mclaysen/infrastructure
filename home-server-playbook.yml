@@ -30,6 +30,18 @@
       community.general.timezone:
         name: "{{ timezone }}"
 
+    - name: Setup modprobe config for vfio-pci
+      ansible.builtin.import_tasks: home-server/tasks/configure_home_server.yml
+
+    - name: Reboot host if vfio config changed
+      ansible.builtin.reboot:
+        msg: Rebooting to apply vfio-pci binding changes
+        reboot_timeout: 1800
+        connect_timeout: 30
+        post_reboot_delay: 20
+        test_command: whoami
+      when: vfio_reboot_required | default(false)
+
     - name: Setup cockpit
       ansible.builtin.import_tasks: home-server/tasks/setup_cockpit.yml
 

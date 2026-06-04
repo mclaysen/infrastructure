@@ -68,6 +68,18 @@ container_manager_seed_img_path: /var/lib/libvirt/images-bulk/container_manager_
 container_manager_seed_user_name: "user-data-{{container_manager_vm_name}}"
 container_manager_seed_meta_name: "meta-data-{{container_manager_vm_name}}"
 container_manager_disk_size_gb: 300
+container_manager_gpu_ids:
+  - 10de:1d01
+  - 10de:0fb8
+container_manager_pci_devices:
+  - domain: "0x0000"
+    bus: "0x01"
+    slot: "0x00"
+    function: "0x0" #nvidia gpu
+  - domain: "0x0000"
+    bus: "0x01"
+    slot: "0x00"
+    function: "0x1" #nvidia hdmi audio
 
 # Bridge network configuration
 bridge_network_name: br0

@@ -1,0 +1,32 @@
+---
+- name: Setup modprobe config for vfio-pci
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/vfio.conf
+    content: |
+      options vfio-pci ids={{ container_manager_gpu_ids | join(",") }}
+      softdep nouveau pre: vfio-pci
+      softdep nvidia pre: vfio-pci
+      softdep snd_hda_intel pre: vfio-pci
+    mode: "0644"
+  register: modprobe_vfio 
+  # indicate if changed
+
+- name: Ensure vfio is attached to gpu at startup, update load-modules
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/vfio.conf
+    content: |
+      vfio
+      vfio_pci
+      vfio_iommu_type1
+    mode: "0644"
+  register: modules_load_vfio
+
+- name: Rebuild initramfs
+  ansible.builtin.command: dracut -f
+  when: modprobe_vfio.changed or modules_load_vfio.changed
+
+- name: Mark whether vfio reboot is required
+  ansible.builtin.set_fact:
+    vfio_reboot_required: "{{ modprobe_vfio.changed or modules_load_vfio.changed }}"
+  
+

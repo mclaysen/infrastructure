@@ -39,5 +39,16 @@
     <video>
       <model type='vga' vram='16384' heads='1'/>
     </video>
+    {% for device in container_manager_pci_devices | default([]) %}
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <source>
+        <address domain='{{ device.domain }}'
+        bus='{{ device.bus }}'
+        slot='{{ device.slot }}'
+        function='{{ device.function }}'
+        />
+      </source>
+    </hostdev>
+    {% endfor %}
   </devices>
 </domain>
