@@ -76,14 +76,13 @@
   tags:
     - reverse_proxy_vm
 
-- name: Create reverse proxy VM
+- name: Create or update reverse proxy VM
   community.libvirt.virt:
     command: define
     xml: "{{ lookup('template', 'home-server/templates/reverse_proxy_domain.xml.j2') }}"
     autostart: true
     mutate_flags:
       - ADD_UUID
-  when: reverse_proxy_vm_name not in (defined_vms.list_vms | default([]))
   tags:
     - reverse_proxy_vm
 

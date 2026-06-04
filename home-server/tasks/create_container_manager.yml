@@ -77,14 +77,13 @@
   tags:
     - container_manager_vm
 
-- name: Create container manager VM
+- name: Create or update container manager VM
   community.libvirt.virt:
     command: define
     xml: "{{ lookup('template', 'home-server/templates/container_manager_domain.xml.j2') }}"
     autostart: true
     mutate_flags:
       - ADD_UUID
-  when: container_manager_vm_name not in (defined_vms.list_vms | default([]))
   tags:
     - container_manager_vm
 
