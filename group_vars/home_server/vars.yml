@@ -28,9 +28,11 @@ home_assistant_network_model: virtio
 home_assistant_mac_address: 02:42:AC:1C:6B:0A
 usb_devices:
   - bus: 1
-    device: 4
+    device: 4 #zwave adapter
   - bus: 1
-    device: 3
+    device: 6 #zwave adapter
+  - bus: 1
+    device: 2 #bluetooth adapter
 
 # Reverse proxy vm configs
 reverse_proxy_vm_name: proxy-prod
@@ -69,8 +71,8 @@ container_manager_disk_size_gb: 300
 
 # Bridge network configuration
 bridge_network_name: br0
-bridge_interface_name: br0-slave-enp4s0
-ethernet_ifname: enp4s0
+ethernet_ifname: enp5s0
+bridge_interface_name: "br0-slave-{{ ethernet_ifname }}"
 bridge_stp_enabled: false
 bridge_ipv4_method: disabled
 bridge_ipv6_method: disabled

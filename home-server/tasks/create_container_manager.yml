@@ -9,6 +9,13 @@
   tags:
     - container_manager_vm
 
+- name: Gather defined VMs
+  community.libvirt.virt:
+    command: list_vms
+  register: defined_vms
+  tags:
+    - container_manager_vm
+
 - name: Check if the disk for the container manager VM already exists
   ansible.builtin.stat:
     path: "{{ container_manager_disk_path }}"
@@ -77,6 +84,7 @@
     autostart: true
     mutate_flags:
       - ADD_UUID
+  when: container_manager_vm_name not in (defined_vms.list_vms | default([]))
   tags:
     - container_manager_vm
 

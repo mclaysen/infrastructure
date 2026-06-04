@@ -94,6 +94,7 @@
     autostart: true
     mutate_flags:
       - ADD_UUID
+  when: home_assistant_vm_name not in (defined_vms.list_vms | default([]))
   tags:
     - home_assistant_vm
 

@@ -109,6 +109,78 @@ ansible-vault edit group_vars/tunnel_hosts/vault.yml --vault-password-file ./.va
 
 ---
 
+## Home Server Infrastructure
+
+The home server playbook configures libvirt, the bridge network, and these VMs:
+- Home Assistant
+- Reverse proxy
+- Container manager
+
+Run it with:
+
+```bash
+ansible-playbook home-server-playbook.yml --vault-password-file ./.vault_pass
+```
+
+Notes:
+- `group_vars/home_server/vars.yml` must match the current physical NIC name used for the bridge, via `ethernet_ifname`.
+- On Alma/RHEL 10, libvirt uses modular daemons. `home-server/tasks/initialize_libvirt.yml` enables and starts the required sockets and services.
+
+### Libvirt SELinux "already in use" recovery
+
+Symptom:
+- Cockpit or Ansible fails to start a VM with `Requested operation is not valid: Setting different SELinux label on ... which is already in use`.
+
+What this meant here:
+- The VM file was not actively in use by another domain.
+- Libvirt had stale `trusted.libvirt.security.*` xattrs on a VM-owned file.
+- For BIOS guests this was the qcow2 disk.
+- For the UEFI Home Assistant guest this was the NVRAM file at `/var/lib/libvirt/qemu/nvram/home-assistant-prod_VARS.fd`.
+
+Quick checks:
+
+```bash
+sudo getfattr -d -m 'trusted.libvirt.security.*' /path/to/vm-file 2>/dev/null || true
+sudo ps -efZ | grep '[q]emu' || true
+sudo fuser -v /path/to/vm-file || true
+sudo ls -lZ /path/to/vm-file
+```
+
+Recovery for a stopped VM file:
+
+```bash
+sudo virsh destroy <domain> 2>/dev/null || true
+
+for attr in \
+  trusted.libvirt.security.selinux \
+  trusted.libvirt.security.dac \
+  trusted.libvirt.security.ref_selinux \
+  trusted.libvirt.security.ref_dac \
+  trusted.libvirt.security.timestamp_selinux \
+  trusted.libvirt.security.timestamp_dac
+do
+  sudo setfattr -x "$attr" /path/to/vm-file 2>/dev/null || true
+done
+
+sudo restorecon -Fv /path/to/vm-file
+sudo systemctl restart virtqemud virtstoraged virtsecretd
+sudo virsh start <domain>
+```
+
+Examples from this host:
+- `proxy-prod` was fixed by clearing stale libvirt security xattrs on `/var/lib/libvirt/images-bulk/reverse-proxy.qcow2`.
+- `home-assistant-prod` was fixed by clearing the same stale xattrs on `/var/lib/libvirt/qemu/nvram/home-assistant-prod_VARS.fd`.
+
+If libvirt daemon sockets are missing after reboot, restart or enable them:
+
+```bash
+sudo systemctl enable --now \
+  virtqemud.socket virtstoraged.socket virtnetworkd.socket \
+  virtnodedevd.socket virtsecretd.socket
+```
+
+---
+
 ## General
 
 ### Updating secrets

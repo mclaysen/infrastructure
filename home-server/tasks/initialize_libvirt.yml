@@ -15,6 +15,30 @@
     state: started
     enabled: true
 
+- name: Enable libvirt modular daemon sockets
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - virtqemud.socket
+    - virtstoraged.socket
+    - virtnetworkd.socket
+    - virtnodedevd.socket
+    - virtsecretd.socket
+
+- name: Start libvirt modular daemons
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - virtqemud.service
+    - virtstoraged.service
+    - virtnetworkd.service
+    - virtnodedevd.service
+    - virtsecretd.service
+
 - name: Add user to libvirt group
   ansible.builtin.user:
     name: "{{ deploy_user_name }}"
