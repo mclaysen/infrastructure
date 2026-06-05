@@ -17,11 +17,19 @@ docker_metrics_addr: 0.0.0.0:9323
 container_manager_nvidia_enabled: true
 container_manager_nvidia_cuda_repo_baseurl: https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/
 container_manager_nvidia_container_repo_baseurl: https://nvidia.github.io/libnvidia-container/stable/rpm/$basearch
+container_manager_nvidia_repo_packages:
+  - epel-release
+container_manager_nvidia_prerequisite_packages:
+  - dkms
+  - kernel-devel
+  - kernel-headers
+  - gcc
+  - make
+container_manager_nvidia_driver_branch: "580"
 container_manager_nvidia_driver_packages:
-  - cuda-drivers
+  - "cuda-drivers-{{ container_manager_nvidia_driver_branch }}"
 container_manager_nvidia_container_packages:
   - nvidia-container-toolkit
-jellyfin_nvidia_enabled: true
 
 # Portainer configuration
 portainer_image: portainer/portainer-ce

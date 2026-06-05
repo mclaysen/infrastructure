@@ -47,16 +47,67 @@
     gpgcheck: true
     gpgkey: file:///etc/pki/rpm-gpg/nvidia-container-toolkit-key.pub
 
+- name: Ensure CRB repository is enabled
+  ansible.builtin.command:
+    cmd: dnf config-manager --set-enabled crb
+  changed_when: false
+
+- name: Install NVIDIA prerequisite repositories
+  ansible.builtin.dnf:
+    name: "{{ container_manager_nvidia_repo_packages | default([]) }}"
+    state: present
+    update_cache: true
+  when: (container_manager_nvidia_repo_packages | default([])) | length > 0
+
+- name: Install NVIDIA driver prerequisites
+  ansible.builtin.dnf:
+    name: "{{ container_manager_nvidia_prerequisite_packages }}"
+    state: present
+    update_cache: true
+  register: nvidia_prerequisites
+
+- name: Remove floating NVIDIA driver metapackage
+  ansible.builtin.dnf:
+    name: cuda-drivers
+    state: absent
+  when: "'cuda-drivers' not in container_manager_nvidia_driver_packages"
+
 - name: Install NVIDIA driver packages
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_driver_packages }}"
     state: present
     update_cache: true
+    allowerasing: true
+  register: nvidia_driver_packages
+  notify: restart docker
 
 - name: Install NVIDIA container toolkit packages
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_container_packages }}"
     state: present
+  register: nvidia_container_toolkit_packages
+  notify: restart docker
+
+- name: Flush handlers to restart Docker after NVIDIA runtime changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Try to load the NVIDIA kernel module without rebooting
+  ansible.builtin.command:
+    cmd: modprobe nvidia
+  register: nvidia_modprobe
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Mark whether an NVIDIA reboot is required
+  ansible.builtin.set_fact:
+    container_manager_nvidia_reboot_required: >-
+      {{
+        nvidia_prerequisites.changed or
+        nvidia_driver_packages.changed or
+        nvidia_container_toolkit_packages.changed or
+        (nvidia_modprobe is defined and nvidia_modprobe.rc != 0)
+      }}
 
 - name: Ensure nvidia-persistenced is enabled
   ansible.builtin.systemd:
