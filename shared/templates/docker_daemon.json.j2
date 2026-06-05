@@ -1,3 +1,10 @@
 {
-  "metrics-addr": "{{docker_metrics_addr}}"
+  "metrics-addr": "{{docker_metrics_addr}}"{% if container_manager_nvidia_enabled | default(false) %},
+  "runtimes": {
+    "nvidia": {
+      "path": "nvidia-container-runtime",
+      "args": []
+    }
+  }
+{% endif %}
 }

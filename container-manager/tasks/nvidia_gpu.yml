@@ -1,0 +1,66 @@
+---
+- name: Ensure RPM GPG key directory exists
+  ansible.builtin.file:
+    path: /etc/pki/rpm-gpg
+    state: directory
+    mode: '0755'
+
+- name: Copy NVIDIA CUDA GPG key
+  ansible.builtin.copy:
+    content: "{{ lookup('file', playbook_dir ~ '/container-manager/files/nvidia-cuda-key.pub') }}"
+    dest: /etc/pki/rpm-gpg/nvidia-cuda-key.pub
+    mode: '0644'
+
+- name: Import NVIDIA CUDA GPG key
+  ansible.builtin.rpm_key:
+    state: present
+    key: /etc/pki/rpm-gpg/nvidia-cuda-key.pub
+
+- name: Configure NVIDIA CUDA repository
+  ansible.builtin.yum_repository:
+    name: cuda-rhel10-x86_64
+    description: NVIDIA CUDA Repository
+    file: cuda-rhel10
+    baseurl: "{{ container_manager_nvidia_cuda_repo_baseurl }}"
+    enabled: true
+    gpgcheck: true
+    gpgkey: file:///etc/pki/rpm-gpg/nvidia-cuda-key.pub
+
+- name: Copy NVIDIA container toolkit GPG key
+  ansible.builtin.copy:
+    content: "{{ lookup('file', playbook_dir ~ '/container-manager/files/nvidia-container-toolkit-key.pub') }}"
+    dest: /etc/pki/rpm-gpg/nvidia-container-toolkit-key.pub
+    mode: '0644'
+
+- name: Import NVIDIA container toolkit GPG key
+  ansible.builtin.rpm_key:
+    state: present
+    key: /etc/pki/rpm-gpg/nvidia-container-toolkit-key.pub
+
+- name: Configure NVIDIA container toolkit repository
+  ansible.builtin.yum_repository:
+    name: nvidia-container-toolkit
+    description: NVIDIA Container Toolkit Repository
+    file: nvidia-container-toolkit
+    baseurl: "{{ container_manager_nvidia_container_repo_baseurl }}"
+    enabled: true
+    gpgcheck: true
+    gpgkey: file:///etc/pki/rpm-gpg/nvidia-container-toolkit-key.pub
+
+- name: Install NVIDIA driver packages
+  ansible.builtin.dnf:
+    name: "{{ container_manager_nvidia_driver_packages }}"
+    state: present
+    update_cache: true
+
+- name: Install NVIDIA container toolkit packages
+  ansible.builtin.dnf:
+    name: "{{ container_manager_nvidia_container_packages }}"
+    state: present
+
+- name: Ensure nvidia-persistenced is enabled
+  ansible.builtin.systemd:
+    name: nvidia-persistenced
+    enabled: true
+    state: started
+  failed_when: false

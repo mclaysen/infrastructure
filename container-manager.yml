@@ -25,6 +25,10 @@
         vars:
           deploy_user_name: "{{ username }}"
 
+      - name: Install NVIDIA GPU container support
+        ansible.builtin.import_tasks: container-manager/tasks/nvidia_gpu.yml
+        when: container_manager_nvidia_enabled | default(false)
+
       - name: Setup portainer
         ansible.builtin.import_tasks: container-manager/tasks/portainer_setup.yml
 

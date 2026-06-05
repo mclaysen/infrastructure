@@ -2,7 +2,14 @@ services:
   jellyfin:
     image: jellyfin/jellyfin:{{ jellyfin_version }}
     container_name: jellyfin
-    user: "1000:3004"
+{% if jellyfin_nvidia_enabled | default(container_manager_nvidia_enabled | default(false)) %}
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: {{ jellyfin_nvidia_visible_devices }}
+      NVIDIA_DRIVER_CAPABILITIES: {{ jellyfin_nvidia_driver_capabilities }}
+{% endif %}
+    group_add:
+      - "{{ fileshare_group_gid }}"
     ports:
       - 8096:8096/tcp
       - 7359:7359/udp
