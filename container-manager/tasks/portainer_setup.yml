@@ -62,3 +62,23 @@
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/volumes:/var/lib/docker/volumes
     state: started
+
+- name: Create group for nas Fileshare
+  ansible.builtin.group:
+    name: "{{ fileshare_group_name }}"
+    state: present
+    gid: "{{ fileshare_group_gid }}"
+
+- name: Add user to nas fileshare group
+  ansible.builtin.user:
+    name: "{{ username }}"
+    groups: "{{ fileshare_group_name }}"
+    append: true
+
+- name: Mount the file share for home videos
+  ansible.posix.mount:
+    src: "{{ home_videos_nfs_share }}"
+    path: "{{ home_videos_mount_point }}"
+    fstype: nfs
+    opts: rw
+    state: mounted

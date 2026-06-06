@@ -8,6 +8,12 @@ cadvisor_listen_ip: 172.17.0.1
 cadvisor_port: 8080
 cadvisor_version: 0.55.1
 
+# System configuration
+fileshare_group_name: fileshare_users
+fileshare_group_gid: 3004
+home_videos_nfs_share: 192.168.86.200:/mnt/philbert/media/home_videos
+home_videos_mount_point: /mnt/truenas_shares/home
+
 # Pangolin installer configuration
 reverse_proxy_ip: 192.168.86.168
 

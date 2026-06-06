@@ -8,10 +8,10 @@ services:
       - 8096:8096/tcp
       - 7359:7359/udp
     volumes:
-      - /var/lib/docker/volumes/jellyfin-config/_data:/config
-      - /var/lib/docker/volumes/jellyfin-cache/_data:/cache
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
       - type: bind
-        source: /mnt/truenas_shares/home
+        source: "{{ home_videos_mount_point }}"
         target: /home_videos
     restart: 'unless-stopped'
     networks:
@@ -19,3 +19,6 @@ services:
 networks:
   pangolin_network:
     external: true
+volumes:
+  jellyfin-config:
+  jellyfin-cache:
