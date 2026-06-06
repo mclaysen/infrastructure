@@ -18,3 +18,12 @@
   ansible.builtin.service:
     name: docker
     state: restarted
+
+- name: restart traefik
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    files:
+      - docker-compose.yml
+    services:
+      - traefik
+    state: restarted

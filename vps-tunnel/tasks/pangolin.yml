@@ -120,12 +120,6 @@
     var: pangolin_install_output.stdout_lines
   when: pangolin_install_output.stdout is defined
   
-- name: Convert httpChallenge to dnsChallenge with Cloudflare provider
-  ansible.builtin.replace:
-    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
-    regexp: (\s+)httpChallenge:\n\s+entryPoint:\s+web
-    replace: '\1dnsChallenge:\n\1  provider: cloudflare'
-  
 - name: Update the traefik dynamic config with the cloudflare config for the domain
   ansible.builtin.blockinfile:
     path: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml"
@@ -169,42 +163,14 @@
     owner: "{{ deploy_user_name }}"
     group: "{{ deploy_user_name }}"
 
-- name: Open up port 8082 for traefik
-  ansible.builtin.blockinfile:
-    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
-    insertafter: '^entryPoints:'
-    marker: "# {mark} ANSIBLE MANAGED BLOCK TRAEFIK METRICS"
-    block: |
-          {% filter indent(width=2, first=true) %}
-          metrics:
-            address: :8082
-          {% endfilter %}
-
-- name: Set badger version for the trafik config
-  ansible.builtin.lineinfile:
-    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
-    insertafter: '^\s{6}moduleName: github.com\/fosrl\/badger\n'
-    firstmatch: true
-    regexp: '^\s{6}version:\sv+.*'
-    line: '      version: {{ badger_version }}'
-    backup: true
-
-- name: Add metrics for prometheus
-  ansible.builtin.blockinfile:
-    path: "/home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK PROMETHEUS METRICS"
-    block: |
-            metrics:
-              prometheus:
-                buckets:
-                  - 0.1
-                  - 0.3
-                  - 1.2
-                  - 5.0
-                entryPoint: metrics
-                addEntryPointsLabels: true
-                addRoutersLabels: true
-                addServicesLabels: true
+- name: Deploy traefik_config.yml
+  ansible.builtin.template:
+    src: vps-tunnel/templates/traefik_config.yml.j2
+    dest: /home/{{ deploy_user_name }}/docker/config/traefik/traefik_config.yml
+    mode: '0644'
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+  notify: restart traefik
 
 - name: Render and deploy templates
   ansible.builtin.template:
@@ -212,18 +178,28 @@
     group: "{{ deploy_user_name }}"
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
-    mode: '0744'
+    mode: '0644'
   loop:
-    - { src: '../templates/prometheus_config.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/config/prometheus/prometheus.yml' }
-    - { src: '../templates/prometheus_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml' }
-    - { src: '../templates/grafana_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml' }
-    - { src: '../templates/maxmind_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-maxmind.yml' }
-    - { src: '../templates/loki_config.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/config/loki/loki-config.yml' }
-    - { src: '../templates/loki_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-loki.yml' }
-    - { src: '../templates/alloy_compose.yml.j2', dest: '/home/{{ deploy_user_name }}/docker/docker-compose-alloy.yml' }
-    - { src: '../templates/alloy_config.alloy.j2', dest: '/home/{{ deploy_user_name }}/docker/config/alloy/config.alloy' }
-    - { src: '../templates/self_config.alloy.j2', dest: '/home/{{ deploy_user_name }}/docker/config/alloy/self_config.alloy' }
-    - { src: '../templates/endpoint_config.alloy.j2', dest: '/home/{{ deploy_user_name }}/docker/config/alloy/endpoint_config.alloy' }
+    - src: ../templates/prometheus_config.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/prometheus/prometheus.yml
+    - src: ../templates/prometheus_compose.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/docker-compose-prometheus.yml
+    - src: ../templates/grafana_compose.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/docker-compose-grafana.yml
+    - src: ../templates/maxmind_compose.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/docker-compose-maxmind.yml
+    - src: ../templates/loki_config.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/loki/loki-config.yml
+    - src: ../templates/loki_compose.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/docker-compose-loki.yml
+    - src: ../templates/alloy_compose.yml.j2
+      dest: /home/{{ deploy_user_name }}/docker/docker-compose-alloy.yml
+    - src: ../templates/alloy_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/config.alloy
+    - src: ../templates/self_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/self_config.alloy
+    - src: ../templates/endpoint_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/endpoint_config.alloy
 
 - name: Update MaxMind DB path in config.yml
   ansible.builtin.lineinfile:

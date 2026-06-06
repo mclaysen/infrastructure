@@ -1,0 +1,108 @@
+accessLog:
+  bufferingSize: 100
+  fields:
+    defaultMode: drop
+    headers:
+      defaultMode: drop
+      names:
+        Authorization: redact
+        Content-Type: keep
+        Cookie: redact
+        User-Agent: keep
+        X-Forwarded-For: keep
+        X-Forwarded-Proto: keep
+        X-Real-Ip: keep
+    names:
+      ClientAddr: keep
+      ClientHost: keep
+      DownstreamContentSize: keep
+      DownstreamStatus: keep
+      Duration: keep
+      RequestMethod: keep
+      RequestPath: keep
+      RequestProtocol: keep
+      RetryAttempts: keep
+      ServiceName: keep
+      StartUTC: keep
+      TLSCipher: keep
+      TLSVersion: keep
+  filePath: /var/log/traefik/access.log
+  filters:
+    minDuration: 100ms
+    retryAttempts: true
+    statusCodes:
+      - 200-299
+      - 400-499
+      - 500-599
+  format: json
+api:
+  dashboard: true
+  insecure: true
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      email: {{ email_address }}
+      # Use Cloudflare DNS validation so Traefik can issue wildcard certificates.
+      dnsChallenge:
+        provider: cloudflare
+      storage: /letsencrypt/acme.json
+entryPoints:
+  # Extra entrypoint exposed only for Prometheus scraping.
+  metrics:
+    address: :8082
+  web:
+    address: :80
+  websecure:
+    address: :443
+    http:
+      encodedCharacters:
+        allowEncodedQuestionMark: true
+        allowEncodedSlash: true
+      middlewares:
+        - crowdsec@file
+      tls:
+        certResolver: letsencrypt
+    transport:
+      respondingTimeouts:
+        readTimeout: 30m
+experimental:
+  plugins:
+    badger:
+      moduleName: github.com/fosrl/badger
+      # Keep this pinned here instead of patching the installer-generated file in place.
+      version: {{ badger_version }}
+    crowdsec:
+      # CrowdSec plugin is enabled here so the matching file provider config can attach middleware.
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      version: v1.4.4
+log:
+  compress: true
+  format: json
+  level: INFO
+  maxAge: 3
+  maxBackups: 3
+  maxSize: 100
+ping:
+  entryPoint: web
+providers:
+  file:
+    filename: /etc/traefik/dynamic_config.yml
+  http:
+    # Pangolin still owns the dynamic route config; this template only defines Traefik's static config.
+    endpoint: http://pangolin:3001/api/v1/traefik-config
+    pollInterval: 5s
+serversTransport:
+  insecureSkipVerify: true
+metrics:
+  # Prometheus metrics were previously injected with blockinfile; keep them in the template instead.
+  prometheus:
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
