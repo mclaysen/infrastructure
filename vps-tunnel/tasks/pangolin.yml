@@ -139,6 +139,28 @@
                 - "*.{{ domain }}"
           {% endfilter %}
 
+- name: Copy captcha.html to the traefik config directory for use with the CrowdSec captcha provider
+  ansible.builtin.copy:
+    src: vps-tunnel/files/captcha_page.html
+    dest: /home/{{ deploy_user_name }}/docker/config/traefik/captcha.html
+    mode: '0644'
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+
+- name: Add in a Crowdec plugin to enable captcha
+  ansible.builtin.blockinfile:
+    path: "/home/{{ deploy_user_name }}/docker/config/traefik/dynamic_config.yml"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK CROWDEC"
+    insertafter: '^\s{8}crowdsec:\s*$'
+    block: |
+      {% filter indent(width=10, first=true) %}
+      captchaHTMLFilePath: /etc/traefik/captcha.html
+      captchaGracePeriodSeconds: 300
+      captchaProvider: turnstile
+      captchaSiteKey: {{ turnstile_site_key }}
+      captchaSecretKey: {{ turnstile_secret_key }}
+      {% endfilter %}
+
 - name: Deploy docker-compose.yml
   ansible.builtin.template:
     src: vps-tunnel/templates/docker-compose.yml.j2
