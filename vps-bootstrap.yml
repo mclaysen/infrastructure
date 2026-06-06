@@ -7,20 +7,14 @@
   handlers:
     - ansible.builtin.import_tasks: vps-tunnel/handlers/main.yml
   tasks:
-    - name: Update all packages
-      ansible.builtin.dnf:
-        name: "*"
-        state: latest
-        update_cache: true
-        allowerasing: true
-
-    - name: Install basic tools
+    - name: Install and update bootstrap packages
       ansible.builtin.dnf:
         name:
           - curl
           - nano
           - python3-pip
-        state: present
+        state: latest
+        update_cache: true
     
     - name: Install pexpect for expect module
       ansible.builtin.pip:
