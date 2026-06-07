@@ -1,20 +1,33 @@
-local.file_match "traefik" {
-  path_targets = [{"__path__" = "/var/log/traefik/*.log"}]
-  sync_period = "5s"
-}
-
-loki.source.file "traefik" {
-  targets    = local.file_match.traefik.targets
-  forward_to = [loki.process.traefik.receiver]
-}
-
-loki.process "traefik" {
-  stage.static_labels {
-    values = {
-      job = "traefik",
-    }
+otelcol.receiver.otlp "default_receiver" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+    auth = otelcol.auth.bearer.api_key.handler
   }
-  forward_to = [loki.write.default.receiver]
+
+  http {
+    endpoint = "0.0.0.0:4318"
+    auth = otelcol.auth.bearer.api_key.handler
+  }
+
+  output {
+    logs    = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+    output {
+        logs = [otelcol.exporter.otlphttp.loki_exporter.input]
+    }
+}
+
+otelcol.exporter.otlphttp "loki_exporter" {
+  client {
+    endpoint = "http://loki:3100/otlp"
+  }
+}
+
+otelcol.auth.bearer "api_key" {
+  token = "{{ alloy_otlp_api_key }}"
 }
 
 prometheus.scrape "example" {

@@ -1,7 +1,7 @@
 accessLog:
   bufferingSize: 100
   fields:
-    defaultMode: drop
+    defaultMode: keep
     headers:
       defaultMode: drop
       names:
@@ -12,6 +12,9 @@ accessLog:
         X-Forwarded-For: keep
         X-Forwarded-Proto: keep
         X-Real-Ip: keep
+        CF-Connecting-IP: keep
+        CF-IPCountry: keep
+        CF-Ray: keep
     names:
       ClientAddr: keep
       ClientHost: keep
@@ -35,6 +38,12 @@ accessLog:
       - 400-499
       - 500-599
   format: json
+  #configure OTLP output for logs, in addition to file output
+  otlp:
+    http:
+      endpoint: http://alloy:4318
+      headers:
+        Authorization: Bearer {{ alloy_otlp_api_key }}
 api:
   dashboard: true
   insecure: true
@@ -76,6 +85,7 @@ experimental:
       # CrowdSec plugin is enabled here so the matching file provider config can attach middleware.
       moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
       version: v1.4.4
+  otlpLogs: true
 log:
   compress: true
   format: json
@@ -83,6 +93,11 @@ log:
   maxAge: 3
   maxBackups: 3
   maxSize: 100
+  otlp:
+    http:
+      endpoint: http://alloy:4318
+      headers:
+        Authorization: Bearer {{ alloy_otlp_api_key }}
 ping:
   entryPoint: web
 providers:
@@ -106,3 +121,4 @@ metrics:
     addEntryPointsLabels: true
     addRoutersLabels: true
     addServicesLabels: true
+  addInternals: true

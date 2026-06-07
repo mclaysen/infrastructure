@@ -22,7 +22,8 @@
 
 - name: gzip and backup configs
   ansible.builtin.archive:
-    path: "/home/{{ deploy_user_name }}/docker"
+    path:
+      - /home/{{ deploy_user_name }}/docker/config/alloy
     dest: "/home/{{ deploy_user_name }}/backups/docker{{ ansible_facts.date_time.epoch }}.tar.gz"
     format: gz
     owner: "{{ deploy_user_name }}"
@@ -172,6 +173,22 @@
     group: "{{ deploy_user_name }}"
   notify: restart traefik
 
+- name: Deploy alloy configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '0644'
+    owner: "{{ deploy_user_name }}"
+    group: "{{ deploy_user_name }}"
+  loop:
+    - src: vps-tunnel/templates/alloy_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/config.alloy
+    - src: ../templates/self_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/self_config.alloy
+    - src: ../templates/endpoint_config.alloy.j2
+      dest: /home/{{ deploy_user_name }}/docker/config/alloy/endpoint_config.alloy
+  notify: restart alloy
+
 - name: Render and deploy templates
   ansible.builtin.template:
     owner: "{{ deploy_user_name }}"
@@ -194,12 +211,6 @@
       dest: /home/{{ deploy_user_name }}/docker/docker-compose-loki.yml
     - src: ../templates/alloy_compose.yml.j2
       dest: /home/{{ deploy_user_name }}/docker/docker-compose-alloy.yml
-    - src: ../templates/alloy_config.alloy.j2
-      dest: /home/{{ deploy_user_name }}/docker/config/alloy/config.alloy
-    - src: ../templates/self_config.alloy.j2
-      dest: /home/{{ deploy_user_name }}/docker/config/alloy/self_config.alloy
-    - src: ../templates/endpoint_config.alloy.j2
-      dest: /home/{{ deploy_user_name }}/docker/config/alloy/endpoint_config.alloy
 
 - name: Update MaxMind DB path in config.yml
   ansible.builtin.lineinfile:

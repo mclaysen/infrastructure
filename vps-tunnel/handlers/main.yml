@@ -27,3 +27,12 @@
     services:
       - traefik
     state: restarted
+
+- name: restart alloy
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ deploy_user_name }}/docker"
+    files:
+      - docker-compose-alloy.yml
+    services:
+      - alloy
+    state: restarted
