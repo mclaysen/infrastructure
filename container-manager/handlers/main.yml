@@ -3,3 +3,9 @@
   ansible.builtin.service:
     name: docker
     state: restarted
+
+- name: Restart newt
+  community.docker.docker_container:
+    name: newt
+    state: started
+    restart: true

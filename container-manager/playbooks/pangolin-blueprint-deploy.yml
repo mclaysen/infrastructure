@@ -11,6 +11,8 @@
     name: newt
     stack_type: standalone
     rendered_dir: /tmp/portainer-stacks
+  handlers:
+    - ansible.builtin.import_tasks: ../handlers/main.yml
   tasks:
 
     - name: Ensure rendered stacks directory exists
@@ -28,7 +30,14 @@
         owner: "{{ username }}"
         group: "{{ username }}"
         mode: '0644'
-        
+
+    - name: Create temporary directory for rendered stack files
+      ansible.builtin.file:
+        path: "{{ rendered_dir }}"
+        state: directory
+      delegate_to: localhost
+      become: false
+
     - name: Render compose templates for stacks
       ansible.builtin.template:
         src: ../stacks/newt.yml.j2
@@ -56,3 +65,4 @@
       delegate_to: localhost
       become: false
       run_once: true
+      notify: Restart newt
