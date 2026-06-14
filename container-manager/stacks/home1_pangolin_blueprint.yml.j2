@@ -10,6 +10,16 @@ public-resources:
         hostname: {{reverse_proxy_ip}}
         method: https
         port: 443
+        healthcheck:
+          method: GET
+          scheme: http
+          hostname: 192.168.86.202
+          port: 3000
+          path: /auth/isconfigured
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          enabled: true
   alloy:
     name: Alloy
     protocol: http
@@ -66,6 +76,16 @@ public-resources:
         hostname: {{reverse_proxy_ip}}
         method: https
         port: 443
+        healthcheck:
+          method: GET
+          scheme: http
+          hostname: 192.168.86.202
+          port: 5001
+          path: /
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          enabled: true
   media:
     name: Jellyfin Media
     protocol: http
@@ -77,6 +97,17 @@ public-resources:
         hostname: {{reverse_proxy_ip}}
         method: https
         port: 443
+        healthcheck:
+          method: GET
+          scheme: http
+          hostname: 192.168.86.202
+          port: 8096
+          path: /health
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          status: 200
+          enabled: true
     rules:
       - action: allow
         match: country
