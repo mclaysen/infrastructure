@@ -32,7 +32,7 @@ usb_devices:
   - bus: 1
     device: 4 #zwave adapter
   - bus: 1
-    device: 7 #bluetooth adapter
+    device: 2 #bluetooth adapter
 
 # Reverse proxy vm configs
 reverse_proxy_vm_name: proxy-prod
