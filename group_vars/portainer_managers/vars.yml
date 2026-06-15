@@ -52,7 +52,7 @@ portainer_manager_endpoint: http://192.168.86.202:9000 #https://container-manage
 cloudflared_version: 2026.5.0
 
 # Newt configuration
-newt_version: 1.8.1
+newt_version: 1.13.0
 blueprint_file_path: /home/{{ username }}/docker/newt/config/home1_pangolin_blueprint.yml
 
 #Jellyfin

@@ -1,6 +1,6 @@
 services:
   newt:
-    image: fosrl/newt:1.8.1
+    image: fosrl/newt:{{ newt_version }}
     container_name: newt
     restart: unless-stopped
     extra_hosts:
