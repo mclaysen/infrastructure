@@ -1,4 +1,67 @@
 public-resources:
+  nas2:
+    name: Synology NAS
+    protocol: http
+    full-domain: nas2.{{ domain }}
+    host-header: nas2.{{ domain }}
+    tls-server-name: nas2.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+        healthcheck:
+          method: GET
+          scheme: https
+          hostname: 192.168.86.103
+          port: 5001
+          path: /webapi/entry.cgi?api=SYNO.API.Info&version=1&method=query&query=SYNO.Core.System
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          enabled: true
+  hass:
+    name: Home assistant
+    protocol: http
+    full-domain: hass.{{ domain }}
+    host-header: hass.{{ domain }}
+    tls-server-name: hass.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+        healthcheck:
+          method: GET
+          scheme: http
+          hostname: 192.168.86.78
+          port: 8123
+          path: /manifest.json
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          enabled: true
+  kvm:
+    name: KVM Management for home server
+    protocol: http
+    full-domain: kvm.{{ domain }}
+    host-header: kvm.{{ domain }}
+    tls-server-name: kvm.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+        healthcheck:
+          method: GET
+          scheme: https
+          hostname: 192.168.86.177
+          port: 443
+          path: /login
+          interval: 30
+          timeout: 5
+          unhealthy-interval: 15
+          enabled: true
   media-stats:
     name: Jellyfin Media Stats
     protocol: http
