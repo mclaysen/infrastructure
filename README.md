@@ -208,3 +208,4 @@ ansible-vault edit ./group_vars/tunnel_hosts/vault.yml --vault-password-file ./.
 - Add monitoring for intermittent LAN health issues, including blackbox probes for key local services like the router, Cockpit, and Home Assistant.
 - Add host-level alerts for bridge and NIC degradation, especially drops/errors on `enp4s0`, `br0`, and VM tap interfaces.
 - Add lightweight Layer 2 visibility for broadcast and ARP spikes so misbehaving devices can be identified faster.
+- Ensure Docker waits for the home videos NFS mount before restoring Jellyfin after host reboot, so the container does not start against an empty bind mount.
