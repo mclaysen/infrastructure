@@ -209,3 +209,4 @@ ansible-vault edit ./group_vars/tunnel_hosts/vault.yml --vault-password-file ./.
 - Add host-level alerts for bridge and NIC degradation, especially drops/errors on `enp4s0`, `br0`, and VM tap interfaces.
 - Add lightweight Layer 2 visibility for broadcast and ARP spikes so misbehaving devices can be identified faster.
 - Ensure Docker waits for the home videos NFS mount before restoring Jellyfin after host reboot, so the container does not start against an empty bind mount.
+- Set up Firewalld on the container manager host, including the Python bindings needed for Ansible-managed firewall rules.
