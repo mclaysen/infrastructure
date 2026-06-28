@@ -10,7 +10,7 @@ services:
     volumes:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - /home/{{ username }}/docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - {{ prometheus_config_path }}:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     networks:
       - monitoring-network

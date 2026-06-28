@@ -61,6 +61,7 @@ jellyfin_version: 10.11.8
 #monitoring stack
 prometheus_version: v3.9.1
 prometheus_host_port: 9091
+prometheus_config_path: /home/{{ username }}/docker/monitoring/prometheus/prometheus.yml
 
 sudoers_file_path: /etc/sudoers
 

@@ -9,7 +9,14 @@
   tasks:
     - name: Create monitoring config directory
       ansible.builtin.file:
-        path: "/home/{{ username }}/docker/monitoring/prometheus"
+        path: "{{ prometheus_config_path | ansible.builtin.dirname }}"
+        state: directory
+        mode: '0755'
+        recurse: true
+
+    - name: Create smarthome config directory
+      ansible.builtin.file:
+        path: "{{ homebridge_config_dir }}"
         state: directory
         mode: '0755'
         recurse: true
@@ -17,7 +24,7 @@
     - name: Place Prometheus configuration
       ansible.builtin.template:
         src: ../stacks/prometheus_config.yml.j2
-        dest: "/home/{{ username }}/docker/monitoring/prometheus/prometheus.yml"
+        dest: "{{ prometheus_config_path }}"
         mode: '0644'
 
     - name: Deploy docker config
