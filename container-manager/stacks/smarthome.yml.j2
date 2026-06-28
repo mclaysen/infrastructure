@@ -1,0 +1,15 @@
+services:
+  homebridge:
+    image: homebridge/homebridge:{{ homebridge_version }}
+    restart: always
+    network_mode: host
+    volumes:
+      - {{ homebridge_config_dir }}:/homebridge
+    logging:
+      driver: json-file
+      options:
+        max-size: "10mb"
+        max-file: "1"
+networks:
+  smarthome-network:
+    driver: bridge

@@ -49,6 +49,13 @@
     portainer_token: "{{ portainer_api_token }}"
     rendered_dir: /tmp/portainer-stacks
     stacks:
+      - name: smarthome
+        template: ../stacks/smarthome.yml.j2
+        stack_type: standalone
+        endpoint_id: "{{ endpoint_id }}"
+        env: []
+        prune: true
+        pull_images: true
       - name: monitoring_stack
         template: ../stacks/monitoring_stack.yml.j2
         stack_type: standalone

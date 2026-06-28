@@ -58,6 +58,10 @@ blueprint_file_path: /home/{{ username }}/docker/newt/config/home1_pangolin_blue
 #Jellyfin
 jellyfin_version: 10.11.8
 
+#smarthome stack
+homebridge_version: '2026-06-24'
+homebridge_config_dir: /home/{{ username }}/docker/smarthome/homebridge
+
 #monitoring stack
 prometheus_version: v3.9.1
 prometheus_host_port: 9091
