@@ -15,6 +15,9 @@
           state: latest
           update_cache: true
           allowerasing: true
+          disablerepo:
+            - cuda-rhel10-x86_64
+            - nvidia-container-toolkit
 
       - name: Set timezone
         community.general.timezone:

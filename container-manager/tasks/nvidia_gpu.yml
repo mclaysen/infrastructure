@@ -22,7 +22,7 @@
     description: NVIDIA CUDA Repository
     file: cuda-rhel10
     baseurl: "{{ container_manager_nvidia_cuda_repo_baseurl }}"
-    enabled: true
+    enabled: false
     gpgcheck: true
     gpgkey: file:///etc/pki/rpm-gpg/nvidia-cuda-key.pub
 
@@ -43,7 +43,7 @@
     description: NVIDIA Container Toolkit Repository
     file: nvidia-container-toolkit
     baseurl: "{{ container_manager_nvidia_container_repo_baseurl }}"
-    enabled: true
+    enabled: false
     gpgcheck: true
     gpgkey: file:///etc/pki/rpm-gpg/nvidia-container-toolkit-key.pub
 
@@ -56,14 +56,12 @@
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_repo_packages | default([]) }}"
     state: present
-    update_cache: true
   when: (container_manager_nvidia_repo_packages | default([])) | length > 0
 
 - name: Install NVIDIA driver prerequisites
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_prerequisite_packages }}"
     state: present
-    update_cache: true
   register: nvidia_prerequisites
 
 - name: Remove floating NVIDIA driver metapackage
@@ -72,20 +70,15 @@
     state: absent
   when: "'cuda-drivers' not in container_manager_nvidia_driver_packages"
 
-- name: Install NVIDIA driver packages
+- name: Install NVIDIA driver and container runtime packages
   ansible.builtin.dnf:
-    name: "{{ container_manager_nvidia_driver_packages }}"
+    name: "{{ container_manager_nvidia_driver_packages + container_manager_nvidia_container_packages }}"
     state: present
-    update_cache: true
     allowerasing: true
-  register: nvidia_driver_packages
-  notify: restart docker
-
-- name: Install NVIDIA container toolkit packages
-  ansible.builtin.dnf:
-    name: "{{ container_manager_nvidia_container_packages }}"
-    state: present
-  register: nvidia_container_toolkit_packages
+    enablerepo:
+      - cuda-rhel10-x86_64
+      - nvidia-container-toolkit
+  register: nvidia_gpu_packages
   notify: restart docker
 
 - name: Flush handlers to restart Docker after NVIDIA runtime changes
@@ -104,8 +97,7 @@
     container_manager_nvidia_reboot_required: >-
       {{
         nvidia_prerequisites.changed or
-        nvidia_driver_packages.changed or
-        nvidia_container_toolkit_packages.changed or
+        nvidia_gpu_packages.changed or
         (nvidia_modprobe is defined and nvidia_modprobe.rc != 0)
       }}
 
