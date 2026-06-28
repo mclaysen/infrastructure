@@ -37,6 +37,9 @@
       - name: Setup portainer
         ansible.builtin.import_tasks: container-manager/tasks/portainer_setup.yml
 
+      - name: Setup cockpit
+        ansible.builtin.import_tasks: shared/tasks/setup_cockpit.yml
+
 - import_playbook: container-manager/playbooks/portainer-stacks.yml
 
 - import_playbook: container-manager/playbooks/pangolin-blueprint-deploy.yml
