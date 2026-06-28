@@ -21,6 +21,15 @@
         mode: '0755'
         recurse: true
 
+    - name: Create immich upload directory and db_data directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ immich_upload_location }}"
+        - "{{ immich_db_data_location }}"
+
     - name: Place Prometheus configuration
       ansible.builtin.template:
         src: ../stacks/prometheus_config.yml.j2
@@ -96,6 +105,23 @@
         stack_type: standalone
         endpoint_id: "{{ endpoint_id }}"
         env: []
+        prune: true
+        pull_images: true
+      - name: immich
+        template: ../stacks/immich.yml.j2
+        stack_type: standalone
+        endpoint_id: "{{ endpoint_id }}"
+        env:
+          - name: UPLOAD_LOCATION
+            value: "{{ immich_upload_location }}"
+          - name: DB_DATA_LOCATION
+            value: "{{ immich_db_data_location }}"
+          - name: DB_PASSWORD
+            value: "{{ immich_db_password }}"
+          - name: DB_USERNAME
+            value: postgres
+          - name: DB_DATABASE_NAME
+            value: immich
         prune: true
         pull_images: true
   tasks:

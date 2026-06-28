@@ -75,6 +75,13 @@
     groups: "{{ fileshare_group_name }}"
     append: true
 
+- name: Create mountpoint for Immich external photo library
+  ansible.builtin.file:
+    path: "{{ immich_external_photos_mount_point }}"
+    state: directory
+    mode: '0755'
+  when: immich_external_photos_nfs_share | default('') | length > 0
+
 - name: Mount the file share for home videos
   ansible.posix.mount:
     src: "{{ home_videos_nfs_share }}"
@@ -82,3 +89,12 @@
     fstype: nfs
     opts: rw
     state: mounted
+
+- name: Mount the file share for Immich external photos
+  ansible.posix.mount:
+    src: "{{ immich_external_photos_nfs_share }}"
+    path: "{{ immich_external_photos_mount_point }}"
+    fstype: nfs
+    opts: ro
+    state: mounted
+  when: immich_external_photos_nfs_share | default('') | length > 0

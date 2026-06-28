@@ -67,6 +67,14 @@ prometheus_version: v3.9.1
 prometheus_host_port: 9091
 prometheus_config_path: /home/{{ username }}/docker/monitoring/prometheus/prometheus.yml
 
+#immich
+immich_version: v2.7.5
+immich_upload_location: /home/{{ username }}/docker/immich/upload
+immich_db_data_location: /home/{{ username }}/docker/immich/db
+immich_external_photos_nfs_share: 192.168.86.200:/mnt/philbert/media/photos
+immich_external_photos_mount_point: /mnt/truenas_shares/photos
+immich_external_photos_container_path: /mnt/media/photos
+
 sudoers_file_path: /etc/sudoers
 
 security_ssh_config_path: /etc/ssh/sshd_config
