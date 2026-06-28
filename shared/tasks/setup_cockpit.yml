@@ -10,13 +10,6 @@
     state: started
     enabled: true
 
-- name: Open cockpit port in firewall
-  ansible.builtin.firewalld:
-    service: cockpit
-    permanent: true
-    state: enabled
-    immediate: true
-  notify: Restart firewalld
 
 - name: Verify cockpit is running
   ansible.builtin.uri:
