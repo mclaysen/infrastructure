@@ -13,6 +13,9 @@ services:
       - type: bind
         source: "{{ home_videos_mount_point }}"
         target: /home_videos
+      - type: bind
+        source: "{{ movies_mount_point }}"
+        target: /movies
     restart: 'unless-stopped'
     networks:
       - pangolin_network
