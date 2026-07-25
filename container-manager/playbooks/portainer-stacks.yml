@@ -124,6 +124,15 @@
             value: immich
         prune: true
         pull_images: true
+      - name: protonmail_bridge
+        template: ../stacks/proton_mail_bridge.yml.j2
+        stack_type: standalone
+        endpoint_id: "{{ endpoint_id }}"
+        env:
+          - name: PROTONMAIL_KEYRING_PASSPHRASE
+            value: "{{ PROTONMAIL_KEYRING_PASSPHRASE }}"
+        prune: true
+        pull_images: true
   tasks:
     - name: Ensure API token is provided
       ansible.builtin.assert:
