@@ -83,7 +83,7 @@ ghost_upload_path: /home/{{ username }}/docker/ghost/content
 ghost_mysql_data_path: /home/{{ username }}/docker/ghost/mysql
 ghost_admin_domain: ghost.mclaysen.com
 ghost_domain: blog.mclaysen.com
-ghost_email_from: "no-reply@{{ domain }}"
+ghost_email_from: "notifications@{{ domain }}"
 
 sudoers_file_path: /etc/sudoers
 

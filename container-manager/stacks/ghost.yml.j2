@@ -3,7 +3,7 @@
 services:
   ghost:
     # Do not alter this without updating the Tinybird Sync container as well
-    image: ghost:6.54-alpine@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a
+    image: ghost:6.54.0-alpine@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a
     restart: always
     ports:
       - "{{ container_manager_host_ip }}:2368:2368"
@@ -27,7 +27,8 @@ services:
       mail__options__secure: ${mail__options__secure:-false}
       mail__options__auth__user: ${mail__options__auth__user:-}
       mail__options__auth__pass: ${mail__options__auth__pass:-}
-      mail__from: ${email__from:-}
+      mail__from: ${mail__from:-}
+      mail__options__tls__rejectUnauthorized: false
     volumes:
       - ${UPLOAD_LOCATION:-./data/ghost}:/var/lib/ghost/content
     depends_on:
@@ -38,9 +39,6 @@ services:
         required: false
       tinybird-deploy:
         condition: service_completed_successfully
-        required: false
-      activitypub:
-        condition: service_started
         required: false
     networks:
       - ghost_network
@@ -56,10 +54,8 @@ services:
       MYSQL_USER: ${DATABASE_USER:-ghost}
       MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
       MYSQL_DATABASE: ghost
-      MYSQL_MULTIPLE_DATABASES: activitypub
     volumes:
       - ${MYSQL_DATA_LOCATION:-./data/mysql}:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: mysqladmin ping -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1
       interval: 1s
@@ -84,31 +80,6 @@ services:
       TINYBIRD_TRACKER_TOKEN: ${TINYBIRD_TRACKER_TOKEN:-}
       LOG_LEVEL: debug
     profiles: [analytics]
-    networks:
-      - ghost_network
-
-  activitypub:
-    image: ghcr.io/tryghost/activitypub:1.2.7@sha256:f677e8af8df41418c3bfd63b4ec76b9bf2bbd85bde7da0aa9ecd86e41a230835
-    restart: always
-    expose:
-      - "8080"
-    volumes:
-      - ${UPLOAD_LOCATION:-./data/ghost}:/opt/activitypub/content
-    environment:
-      # See https://github.com/TryGhost/ActivityPub/blob/main/docs/env-vars.md
-      NODE_ENV: production
-      MYSQL_HOST: db
-      MYSQL_USER: ${DATABASE_USER:-ghost}
-      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
-      MYSQL_DATABASE: activitypub
-      LOCAL_STORAGE_PATH: /opt/activitypub/content/images/activitypub
-      LOCAL_STORAGE_HOSTING_URL: https://${DOMAIN}/content/images/activitypub
-    depends_on:
-      db:
-        condition: service_healthy
-      activitypub-migrate:
-        condition: service_completed_successfully
-    profiles: [activitypub]
     networks:
       - ghost_network
 
@@ -171,18 +142,6 @@ services:
     networks:
       - ghost_network
     tty: true
-
-  activitypub-migrate:
-    image: ghcr.io/tryghost/activitypub-migrations:1.2.7@sha256:19724eca7b7669b01047c746738bf34c46dfa587e2be5b8641067d9ab707a7bb
-    environment:
-      MYSQL_DB: mysql://${DATABASE_USER:-ghost}:${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}@tcp(db:3306)/activitypub
-    networks:
-      - ghost_network
-    depends_on:
-      db:
-        condition: service_healthy
-    profiles: [activitypub]
-    restart: no
 
 volumes:
   tinybird_files:

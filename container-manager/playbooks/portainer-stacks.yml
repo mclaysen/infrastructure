@@ -153,9 +153,9 @@
           - name: mail__options__host
             value: protonmail-bridge
           - name: mail__options__port
-            value: 25
+            value: "25"
           - name: mail__options__secure
-            value: false
+            value: "false"
           - name: mail__options__auth__user
             value: "{{ ghost_email_user }}"
           - name: mail__options__auth__pass
