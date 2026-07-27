@@ -128,6 +128,28 @@ public-resources:
         hostname: grafana
         method: http
         port: 3000
+  blog:
+    name: Ghost Blog
+    protocol: http
+    full-domain: blog.{{ domain }}
+    host-header: blog.{{ domain }}
+    tls-server-name: blog.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
+  ghost-admin:
+    name: Ghost Admin
+    protocol: http
+    full-domain: ghost.{{ domain }}
+    host-header: ghost.{{ domain }}
+    tls-server-name: ghost.{{ domain }}
+    targets:
+      - site: alienated-giant-girdled-lizard
+        hostname: {{reverse_proxy_ip}}
+        method: https
+        port: 443
   mclaysen-website:
     name: mclaysen.com website
     protocol: http

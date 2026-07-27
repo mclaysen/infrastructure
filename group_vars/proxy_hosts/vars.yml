@@ -97,6 +97,16 @@ sites:
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
     custom: true
+  - app_name: blog
+    app_domain: blog.mclaysen.com
+    app_backend: http://192.168.86.202:2368
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
+  - app_name: ghost_admin
+    app_domain: ghost.mclaysen.com
+    app_backend: http://192.168.86.202:2368
+    ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
+    ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: website
     app_domain: mclaysen.com
     app_backend: http://192.168.86.202:5001

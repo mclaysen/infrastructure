@@ -21,6 +21,15 @@
         mode: '0755'
         recurse: true
 
+    - name: Create directories for ghost content and MySQL data
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ ghost_upload_path }}"
+        - "{{ ghost_mysql_data_path }}"
+
     - name: Create immich upload directory and db_data directory
       ansible.builtin.file:
         path: "{{ item }}"
@@ -124,6 +133,41 @@
             value: immich
         prune: true
         pull_images: true
+      - name: ghost
+        template: ../stacks/ghost.yml.j2
+        stack_type: standalone
+        endpoint_id: "{{ endpoint_id }}"
+        env:
+          - name: DOMAIN
+            value: "{{ ghost_domain }}"
+          - name: ADMIN_DOMAIN
+            value: "{{ ghost_admin_domain }}"
+          - name: DATABASE_ROOT_PASSWORD
+            value: "{{ ghost_database_root_password }}"
+          - name: DATABASE_USER
+            value: "{{ ghost_database_user }}"
+          - name: DATABASE_PASSWORD
+            value: "{{ ghost_database_password }}"
+          - name: mail__transport
+            value: SMTP
+          - name: mail__options__host
+            value: protonmail-bridge
+          - name: mail__options__port
+            value: 25
+          - name: mail__options__secure
+            value: false
+          - name: mail__options__auth__user
+            value: "{{ ghost_email_user }}"
+          - name: mail__options__auth__pass
+            value: "{{ ghost_email_password }}"
+          - name: mail__from
+            value: "{{ ghost_email_from }}"
+          - name: UPLOAD_LOCATION
+            value: "{{ ghost_upload_path }}"
+          - name: MYSQL_DATA_LOCATION
+            value: "{{ ghost_mysql_data_path }}"
+        prune: true
+        pull_images: true
       - name: protonmail_bridge
         template: ../stacks/proton_mail_bridge.yml.j2
         stack_type: standalone
@@ -164,6 +208,19 @@
         portainer_url: "{{ portainer_url }}"
         portainer_token: "{{ portainer_token }}"
         name: pangolin_network
+        driver: bridge
+        endpoint_id: "{{ endpoint_id }}"
+        state: present
+        internal: false
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Create network for Protonmail
+      bgtor.portainer.portainer_network:
+        portainer_url: "{{ portainer_url }}"
+        portainer_token: "{{ portainer_token }}"
+        name: protonmail-network
         driver: bridge
         endpoint_id: "{{ endpoint_id }}"
         state: present

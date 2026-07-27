@@ -1,0 +1,199 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json
+services:
+  ghost:
+    # Do not alter this without updating the Tinybird Sync container as well
+    image: ghost:6.54-alpine@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a
+    restart: always
+    ports:
+      - "{{ container_manager_host_ip }}:2368:2368"
+    environment:
+      NODE_ENV: production
+      url: https://${DOMAIN:?DOMAIN environment variable is required}
+      admin__url: ${ADMIN_DOMAIN:+https://${ADMIN_DOMAIN}}
+      database__client: mysql
+      database__connection__host: db
+      database__connection__user: ${DATABASE_USER:-ghost}
+      database__connection__password: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      database__connection__database: ghost
+      tinybird__tracker__endpoint: https://${DOMAIN:?DOMAIN environment variable is required}/.ghost/analytics/api/v1/page_hit
+      tinybird__adminToken: ${TINYBIRD_ADMIN_TOKEN:-}
+      tinybird__workspaceId: ${TINYBIRD_WORKSPACE_ID:-}
+      tinybird__tracker__datasource: analytics_events
+      tinybird__stats__endpoint: ${TINYBIRD_API_URL:-https://api.tinybird.co}
+      mail__transport: ${mail__transport:-SMTP}
+      mail__options__host: ${mail__options__host:-}
+      mail__options__port: ${mail__options__port:-}
+      mail__options__secure: ${mail__options__secure:-false}
+      mail__options__auth__user: ${mail__options__auth__user:-}
+      mail__options__auth__pass: ${mail__options__auth__pass:-}
+      mail__from: ${email__from:-}
+    volumes:
+      - ${UPLOAD_LOCATION:-./data/ghost}:/var/lib/ghost/content
+    depends_on:
+      db:
+        condition: service_healthy
+      tinybird-sync:
+        condition: service_completed_successfully
+        required: false
+      tinybird-deploy:
+        condition: service_completed_successfully
+        required: false
+      activitypub:
+        condition: service_started
+        required: false
+    networks:
+      - ghost_network
+      - protonmail-network
+
+  db:
+    image: mysql:8.0.44@sha256:f37951fc3753a6a22d6c7bf6978c5e5fefcf6f31814d98c582524f98eae52b21
+    restart: always
+    expose:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD:?DATABASE_ROOT_PASSWORD environment variable is required}
+      MYSQL_USER: ${DATABASE_USER:-ghost}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      MYSQL_DATABASE: ghost
+      MYSQL_MULTIPLE_DATABASES: activitypub
+    volumes:
+      - ${MYSQL_DATA_LOCATION:-./data/mysql}:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: mysqladmin ping -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1
+      interval: 1s
+      start_period: 30s
+      start_interval: 10s
+      retries: 120
+    networks:
+      - ghost_network
+
+  traffic-analytics:
+    image: ghost/traffic-analytics:1.0.307@sha256:00c3ca5bd8591ca66b2595ab60af886dc5935febee1e53e53134f183195c7abb
+    restart: always
+    expose:
+      - "3000"
+    volumes:
+      - traffic_analytics_data:/data
+    environment:
+      NODE_ENV: production
+      PROXY_TARGET: ${TINYBIRD_API_URL:-https://api.tinybird.co}/v0/events
+      SALT_STORE_TYPE: ${SALT_STORE_TYPE:-file}
+      SALT_STORE_FILE_PATH: /data/salts.json
+      TINYBIRD_TRACKER_TOKEN: ${TINYBIRD_TRACKER_TOKEN:-}
+      LOG_LEVEL: debug
+    profiles: [analytics]
+    networks:
+      - ghost_network
+
+  activitypub:
+    image: ghcr.io/tryghost/activitypub:1.2.7@sha256:f677e8af8df41418c3bfd63b4ec76b9bf2bbd85bde7da0aa9ecd86e41a230835
+    restart: always
+    expose:
+      - "8080"
+    volumes:
+      - ${UPLOAD_LOCATION:-./data/ghost}:/opt/activitypub/content
+    environment:
+      # See https://github.com/TryGhost/ActivityPub/blob/main/docs/env-vars.md
+      NODE_ENV: production
+      MYSQL_HOST: db
+      MYSQL_USER: ${DATABASE_USER:-ghost}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}
+      MYSQL_DATABASE: activitypub
+      LOCAL_STORAGE_PATH: /opt/activitypub/content/images/activitypub
+      LOCAL_STORAGE_HOSTING_URL: https://${DOMAIN}/content/images/activitypub
+    depends_on:
+      db:
+        condition: service_healthy
+      activitypub-migrate:
+        condition: service_completed_successfully
+    profiles: [activitypub]
+    networks:
+      - ghost_network
+
+  # Supporting Services
+
+  tinybird-login:
+    build:
+      context: ./tinybird
+      dockerfile: Dockerfile
+    working_dir: /home/tinybird
+    command: /usr/local/bin/tinybird-login
+    volumes:
+      - tinybird_home:/home/tinybird
+      - tinybird_files:/data/tinybird
+    profiles: [analytics]
+    networks:
+      - ghost_network
+    tty: false
+    restart: no
+
+  tinybird-sync:
+    # Do not alter this without updating the Ghost container as well
+    image: ghost:6.54-alpine@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a
+    command: >
+      sh -c "
+        if [ -d /var/lib/ghost/current/core/server/data/tinybird ]; then
+          rm -rf /data/tinybird/*;
+          cp -rf /var/lib/ghost/current/core/server/data/tinybird/* /data/tinybird/;
+          echo 'Tinybird files synced into shared volume.';
+        else
+          echo 'Tinybird source directory not found.';
+        fi
+      "
+    volumes:
+      - tinybird_files:/data/tinybird
+    depends_on:
+      tinybird-login:
+        condition: service_completed_successfully
+    networks:
+      - ghost_network
+    profiles: [analytics]
+    restart: no
+
+  tinybird-deploy:
+    build:
+      context: ./tinybird
+      dockerfile: Dockerfile
+    working_dir: /data/tinybird
+    command: >
+      sh -c "
+        tb-wrapper --cloud deploy
+      "
+    volumes:
+      - tinybird_home:/home/tinybird
+      - tinybird_files:/data/tinybird
+    depends_on:
+      tinybird-sync:
+        condition: service_completed_successfully
+    profiles: [analytics]
+    networks:
+      - ghost_network
+    tty: true
+
+  activitypub-migrate:
+    image: ghcr.io/tryghost/activitypub-migrations:1.2.7@sha256:19724eca7b7669b01047c746738bf34c46dfa587e2be5b8641067d9ab707a7bb
+    environment:
+      MYSQL_DB: mysql://${DATABASE_USER:-ghost}:${DATABASE_PASSWORD:?DATABASE_PASSWORD environment variable is required}@tcp(db:3306)/activitypub
+    networks:
+      - ghost_network
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: [activitypub]
+    restart: no
+
+volumes:
+  tinybird_files:
+  tinybird_home:
+  traffic_analytics_data:
+
+networks:
+  ghost_network:
+    name: ghost_network
+    driver: bridge
+
+  protonmail-network:
+    external: true
+    name: protonmail-network
