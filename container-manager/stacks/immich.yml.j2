@@ -30,6 +30,7 @@ services:
       disable: false
     networks:
       - immich-network
+      - protonmail-network
 
   immich-machine-learning:
     container_name: immich_machine_learning
@@ -79,3 +80,6 @@ volumes:
 networks:
   immich-network:
     driver: bridge
+  protonmail-network:
+    external: true
+    name: protonmail-network
