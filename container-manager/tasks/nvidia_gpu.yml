@@ -61,8 +61,15 @@
 - name: Install NVIDIA driver prerequisites
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_prerequisite_packages }}"
-    state: present
+    state: "{{ 'latest' if (container_manager_nvidia_update | default(false) | bool) else 'present' }}"
   register: nvidia_prerequisites
+
+- name: Update the kernel as part of NVIDIA maintenance
+  ansible.builtin.dnf:
+    name: "{{ container_manager_nvidia_kernel_packages }}"
+    state: latest
+  register: nvidia_kernel_packages
+  when: container_manager_nvidia_update | default(false) | bool
 
 - name: Remove floating NVIDIA driver metapackage
   ansible.builtin.dnf:
@@ -73,7 +80,7 @@
 - name: Install NVIDIA driver and container runtime packages
   ansible.builtin.dnf:
     name: "{{ container_manager_nvidia_driver_packages + container_manager_nvidia_container_packages }}"
-    state: present
+    state: "{{ 'latest' if (container_manager_nvidia_update | default(false) | bool) else 'present' }}"
     allowerasing: true
     enablerepo:
       - cuda-rhel10-x86_64
@@ -97,6 +104,7 @@
     container_manager_nvidia_reboot_required: >-
       {{
         nvidia_prerequisites.changed or
+        (nvidia_kernel_packages is defined and nvidia_kernel_packages.changed) or
         nvidia_gpu_packages.changed or
         (nvidia_modprobe is defined and nvidia_modprobe.rc != 0)
       }}
