@@ -54,6 +54,15 @@ Deploy or update Portainer stacks:
 ansible-playbook portainer-stacks.yml --vault-password-file ./.vault_pass
 ```
 
+### NVIDIA maintenance
+
+Routine container-manager runs exclude kernel, DKMS, CUDA, and NVIDIA packages.
+This prevents an ordinary OS update from triggering an unplanned driver rebuild.
+For a planned driver update, run only the NVIDIA-tagged tasks with
+`container_manager_nvidia_update=true`. This updates the kernel, driver
+prerequisites, NVIDIA driver, and container toolkit as one operation; expect a
+Docker restart and, when packages change, a reboot.
+
 ### Stacks configuration
 `stacks` is a list of compose deployments. Example entry:
 ```yaml
