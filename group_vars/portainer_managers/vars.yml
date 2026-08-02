@@ -24,6 +24,9 @@ unifi_url: https://192.168.86.1
 
 docker_metrics_addr: 0.0.0.0:9323
 container_manager_nvidia_enabled: false
+# Routine OS updates intentionally exclude the kernel, DKMS, CUDA, and NVIDIA
+# packages. Set this to true only for a planned NVIDIA maintenance run.
+container_manager_nvidia_update: false
 container_manager_nvidia_cuda_repo_baseurl: https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/
 container_manager_nvidia_container_repo_baseurl: https://nvidia.github.io/libnvidia-container/stable/rpm/$basearch
 container_manager_nvidia_repo_packages:
@@ -34,6 +37,8 @@ container_manager_nvidia_prerequisite_packages:
   - kernel-headers
   - gcc
   - make
+container_manager_nvidia_kernel_packages:
+  - kernel*
 container_manager_nvidia_driver_branch: "580"
 container_manager_nvidia_driver_packages:
   - "cuda-drivers-{{ container_manager_nvidia_driver_branch }}"
