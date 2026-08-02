@@ -1,0 +1,35 @@
+---
+
+vars: 
+  immich_restic_path: "{{ immich_backup_mount_point }}/restic-repo"
+
+- name: Mount the truenas nfs share for backups for immich
+  ansible.posix.mount:
+    src: "{{ immich_backup_nfs_share }}"
+    path: "{{ immich_backup_mount_point }}"
+    fstype: nfs
+    opts: rw
+    state: mounted
+
+- name: Verify restic is insalled
+  ansible.builtin.command:
+    cmd: restic version
+  register: restic_version
+  changed_when: false
+
+- name: Display restic version
+  ansible.builtin.debug:
+    msg: "Restic version: {{ restic_version.stdout }}"
+
+- name: Check if restic repository exists
+  ansible.builtin.command:
+    cmd: restic snapshots --repo {{ immich_restic_path }}
+  register: restic_repo_check
+  failed_when: false
+  changed_when: false
+
+- name: Initialize restic repository if it does not exist
+  ansible.builtin.command:
+    cmd: restic init --repo {{ immich_restic_path }}
+  when: restic_repo_check.rc != 0
+

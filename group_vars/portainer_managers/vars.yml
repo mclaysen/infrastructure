@@ -82,6 +82,8 @@ immich_db_data_location: /home/{{ username }}/docker/immich/db
 immich_external_photos_nfs_share: 192.168.86.200:/mnt/philbert/media/photos
 immich_external_photos_mount_point: /mnt/truenas_shares/photos
 immich_external_photos_container_path: /mnt/media/photos
+immich_backup_nfs_share: 192.168.86.200:/mnt/philbert/application_backup/immich
+immich_backup_mount_point: /mnt/truenas_shares/immich_backups
 
 #ghost
 ghost_upload_path: /home/{{ username }}/docker/ghost/content
