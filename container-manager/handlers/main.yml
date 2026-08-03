@@ -9,3 +9,7 @@
     name: newt
     state: started
     restart: true
+
+- name: Restart systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
