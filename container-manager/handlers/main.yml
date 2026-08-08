@@ -10,6 +10,6 @@
     state: started
     restart: true
 
-- name: Restart systemd
+- name: Reload systemd daemon
   ansible.builtin.systemd:
     daemon_reload: true

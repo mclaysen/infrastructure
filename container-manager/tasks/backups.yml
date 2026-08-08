@@ -1,12 +1,4 @@
 ---
-
-vars: 
-  immich_restic_path: "{{ immich_backup_mount_point }}/restic-repo"
-
-environment:
-  RESTIC_REPOSITORY: "{{ immich_restic_path }}"
-  RESTIC_PASSWORD_FILE: "{{ immich_restic_password_file }}"
-
 - name: Mount the truenas nfs share for backups for immich
   ansible.posix.mount:
     src: "{{ immich_backup_nfs_share }}"
@@ -25,25 +17,30 @@ environment:
   ansible.builtin.debug:
     msg: "Restic version: {{ restic_version.stdout }}"
 
-- name: Check if restic repository exists
+- name: Create directory for password file if it does not exist
+  ansible.builtin.file:
+    path: "{{ immich_restic_password_file | dirname }}"
+    state: directory
+    mode: '0700'
+
+- name: Create password file for restic immich repository
+  ansible.builtin.copy:
+    dest: "{{ immich_restic_password_file }}"
+    content: "{{ immich_restic_password }}"
+    mode: '0600'
+  no_log: true
+
+- name: Check whether the Restic repository is initialized
+  ansible.builtin.stat:
+    path: "{{ immich_restic_path }}/config"
+  register: immich_restic_repository_config
+
+- name: Initialize Restic repository for Immich backups
   ansible.builtin.command:
-    cmd: restic snapshots --repo {{ immich_restic_path }}
-  register: restic_repo_check
-  failed_when: false
-  changed_when: false
-
-- name: Setup restic repository for immich backups if it does not exist
-  when: restic_repo_check.rc != 0
-  ansible.builtin.block:
-    - name: Create password file for restic immich repository
-      ansible.builtin.copy:
-        dest: "{{ immich_restic_password_file }}"
-        content: "{{ immich_restic_password }}"
-        mode: '0600'
-
-    - name: Initialize restic repository if it does not exist
-      ansible.builtin.command:
-        cmd: restic init --repo {{ immich_restic_path }}
+    cmd: restic init --repo {{ immich_restic_path }}
+  environment:
+    RESTIC_PASSWORD_FILE: "{{ immich_restic_password_file }}"
+  when: not immich_restic_repository_config.stat.exists
 
 - name: Create immich backup script
   ansible.builtin.template:
@@ -60,8 +57,6 @@ environment:
     mode: '0644'
     owner: root
     group: root
-  notify:
-    - Restart systemd
 
 - name: Ensure immich timer file is placed in systemd directory
   ansible.builtin.copy:
@@ -70,21 +65,13 @@ environment:
     mode: '0644'
     owner: root
     group: root
-  notify:
-    - Restart systemd
+
+- name: Reload systemd unit definitions
+  ansible.builtin.systemd:
+    daemon_reload: true
 
 - name: Enable and start immich backup timer
   ansible.builtin.systemd:
     name: immich-backup.timer
     enabled: true
     state: started
-
-- name: Ensure immich backup timeer is listed in systemd
-  ansible.builtin.command:
-    cmd: systemctl list-timers --all | grep immich-backup.timer
-  register: immich_backup_timer_check
-  changed_when: false
-
-- name: Display immich backup timer status
-  ansible.builtin.debug:
-    msg: "Immich backup timer status: {{ immich_backup_timer_check.stdout }}"

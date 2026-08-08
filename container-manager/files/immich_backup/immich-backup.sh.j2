@@ -5,8 +5,10 @@ MY_LIBRARY="{{ immich_upload_location }}"
 BACKUP_MOUNT="{{ immich_backup_mount_point }}"
 LOG_FILE="${MY_LIBRARY}/backups/immich-backup.log"
 export RESTIC_REPOSITORY="${BACKUP_MOUNT}/restic-repo"
+export RESTIC_CACHE_DIR="/var/cache/restic/immich"
 
 mkdir -p "${MY_LIBRARY}/backups"
+mkdir -p "${RESTIC_CACHE_DIR}"
 exec >> "${LOG_FILE}" 2>&1
 
 log() {

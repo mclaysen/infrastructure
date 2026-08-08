@@ -26,9 +26,9 @@
             # maintenance workflow below. Updating one without the others can
             # trigger slow DKMS rebuilds or leave the driver unusable after a
             # reboot.
-            - 'kernel*'
-            - 'dkms*'
-            - 'cuda*'
+            - kernel*
+            - dkms*
+            - cuda*
             - '*nvidia*'
 
       - name: Set timezone
@@ -62,3 +62,17 @@
 - import_playbook: container-manager/playbooks/portainer-stacks.yml
 
 - import_playbook: container-manager/playbooks/pangolin-blueprint-deploy.yml
+
+- name: Setup Backup tasks
+  hosts: container_manager
+  become: true
+  vars_files:
+    - group_vars/portainer_managers/vars.yml
+    - group_vars/portainer_managers/vault.yml
+  handlers:
+    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
+  tasks:
+    - name: Set backup tasks
+      ansible.builtin.import_tasks: container-manager/tasks/backups.yml
+  tags:
+    - backups

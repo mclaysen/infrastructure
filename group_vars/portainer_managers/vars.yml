@@ -85,6 +85,8 @@ immich_external_photos_container_path: /mnt/media/photos
 immich_backup_nfs_share: 192.168.86.200:/mnt/philbert/application_backup/immich
 immich_backup_mount_point: /mnt/truenas_shares/immich_backups
 immich_restic_password_file: /etc/restic/immich_password
+immich_restic_path: "{{ immich_backup_mount_point }}/restic-repo"
+immich_backup_script_path: /usr/local/bin/immich-backup.sh
 
 #ghost
 ghost_upload_path: /home/{{ username }}/docker/ghost/content
