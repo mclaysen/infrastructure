@@ -74,6 +74,9 @@ homebridge_config_dir: /home/{{ username }}/docker/smarthome/homebridge
 prometheus_version: v3.9.1
 prometheus_host_port: 9091
 prometheus_config_path: /home/{{ username }}/docker/monitoring/prometheus/prometheus.yml
+grafana_provisioning_path: /home/{{ username }}/docker/monitoring/grafana/provisioning
+grafana_dashboards_path: /home/{{ username }}/docker/monitoring/grafana/dashboards
+grafana_url: http://192.168.86.202:3001
 
 #immich
 immich_version: v2.7.5

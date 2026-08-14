@@ -27,6 +27,8 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
       - 'grafana_storage:/var/lib/grafana'
+      - {{ grafana_provisioning_path }}:/etc/grafana/provisioning:ro
+      - {{ grafana_dashboards_path }}:/var/lib/grafana/dashboards:ro
     networks:
       - monitoring-network
     depends_on:

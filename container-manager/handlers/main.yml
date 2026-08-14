@@ -13,3 +13,9 @@
 - name: Reload systemd daemon
   ansible.builtin.systemd:
     daemon_reload: true
+
+- name: Restart Grafana container
+  community.docker.docker_container:
+    name: grafana
+    state: started
+    restart: true

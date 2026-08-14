@@ -63,6 +63,10 @@
 
 - import_playbook: container-manager/playbooks/pangolin-blueprint-deploy.yml
 
+- import_playbook: container-manager/playbooks/grafana.yml
+  tags:
+    - grafana
+
 - name: Setup Backup tasks
   hosts: container_manager
   become: true

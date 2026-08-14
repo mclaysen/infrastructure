@@ -1,0 +1,70 @@
+---
+- name: Setup Grafana
+  hosts: container_manager
+  become: true
+  handlers:
+    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
+  vars_files:
+    - group_vars/portainer_managers/vault.yml
+    - group_vars/portainer_managers/vars.yml
+  tasks:
+    - name: Install requests for HTTP requests
+      ansible.builtin.pip:
+        name: requests
+        executable: pip3
+        state: present
+
+    - name: Ensure Grafana provisioning directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      loop:
+        - "{{ grafana_provisioning_path }}"
+        - "{{ grafana_provisioning_path }}/dashboards"
+        - "{{ grafana_dashboards_path }}"
+
+    - name: Deploy Grafana dashboard provider
+      ansible.builtin.template:
+        src: ../templates/grafana_dashboards_provider.yml.j2
+        dest: "{{ grafana_provisioning_path }}/dashboards/ansible.yml"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      notify: Restart Grafana container
+
+    - name: Copy provisioned Grafana dashboards
+      ansible.builtin.copy:
+        src: ../grafana_dashboards/
+        dest: "{{ grafana_dashboards_path }}/"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      notify: Restart Grafana container
+
+    - name: Wait for Grafana to be ready
+      ansible.builtin.uri:
+        url: "{{ grafana_url }}/api/health"
+        return_content: true
+        method: GET
+        status_code: 200
+      register: result
+      retries: 5
+      delay: 10
+      until: result.status == 200
+
+    - name: Create Grafana datasource for prometheus
+      grafana.grafana.datasource:
+        grafana_url: '{{ grafana_url }}'
+        grafana_api_key: '{{ grafana_api_key }}'
+        state: present
+        dataSource:
+          name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+          uid: prometheus
+      no_log: true
