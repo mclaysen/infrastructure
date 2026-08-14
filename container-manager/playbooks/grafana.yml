@@ -3,10 +3,12 @@
   hosts: container_manager
   become: true
   handlers:
-    - ansible.builtin.import_tasks: container-manager/handlers/main.yml
+    - ansible.builtin.import_tasks: ../handlers/main.yml
   vars_files:
-    - group_vars/portainer_managers/vault.yml
-    - group_vars/portainer_managers/vars.yml
+    - ../../group_vars/portainer_managers/vault.yml
+    - ../../group_vars/portainer_managers/vars.yml
+  vars:
+    grafana_prometheus_datasource_uid: prometheus
   tasks:
     - name: Install requests for HTTP requests
       ansible.builtin.pip:
@@ -35,18 +37,21 @@
         group: "{{ username }}"
       notify: Restart Grafana container
 
-    - name: Copy provisioned Grafana dashboards
+    - name: Deploy provisioned Grafana dashboards
       ansible.builtin.copy:
-        src: ../grafana_dashboards/
-        dest: "{{ grafana_dashboards_path }}/"
+        content: "{{ lookup('ansible.builtin.file', item, rstrip=False) | replace('${DS_PROMETHEUS}', grafana_prometheus_datasource_uid) | replace('${DS_GRAFANACLOUD-SHIZUN-PROM}', grafana_prometheus_datasource_uid) }}"
+        dest: "{{ grafana_dashboards_path }}/{{ item | basename }}"
         mode: '0644'
         owner: "{{ username }}"
         group: "{{ username }}"
       notify: Restart Grafana container
+      loop: "{{ query('ansible.builtin.fileglob', playbook_dir ~ '/../grafana_dashboards/*.json') }}"
+      loop_control:
+        label: "{{ item | basename }}"
 
     - name: Wait for Grafana to be ready
       ansible.builtin.uri:
-        url: "{{ grafana_url }}/api/health"
+        url: "{{ grafana_url }}/healthz"
         return_content: true
         method: GET
         status_code: 200
@@ -66,5 +71,5 @@
           access: proxy
           url: http://prometheus:9090
           isDefault: true
-          uid: prometheus
+          uid: "{{ grafana_prometheus_datasource_uid }}"
       no_log: true

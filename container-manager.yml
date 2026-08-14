@@ -13,7 +13,10 @@
         ansible.builtin.dnf:
           name:
             - restic
+            - python3-pip
           state: present
+        tags:
+          - packages
 
       - name: Update all packages
         ansible.builtin.dnf:
@@ -30,6 +33,8 @@
             - dkms*
             - cuda*
             - '*nvidia*'
+        tags:
+          - packages
 
       - name: Set timezone
         community.general.timezone:
