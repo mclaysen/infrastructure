@@ -77,6 +77,10 @@ prometheus_config_path: /home/{{ username }}/docker/monitoring/prometheus/promet
 grafana_provisioning_path: /home/{{ username }}/docker/monitoring/grafana/provisioning
 grafana_dashboards_path: /home/{{ username }}/docker/monitoring/grafana/dashboards
 grafana_url: http://192.168.86.202:3001
+alloy_version: v1.14.1
+loki_version: 3.6.7
+alloy_config_dir: /home/{{ username }}/docker/monitoring/alloy
+loki_config_path: /home/{{ username }}/docker/monitoring/loki/loki-config.yml
 
 #immich
 immich_version: v2.7.5

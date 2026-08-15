@@ -1,0 +1,48 @@
+// Discover Docker containers and attach useful labels to their log streams.
+discovery.docker "local" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.local.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_image"]
+    target_label  = "image"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
+// Read Docker container logs and forward them to Loki.
+loki.source.docker "local" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.local.targets
+  relabel_rules = discovery.relabel.docker_logs.rules
+  forward_to    = [loki.process.docker_logs.receiver]
+}
+
+loki.process "docker_logs" {
+  forward_to = [loki.write.default.receiver]
+
+  // Do not ingest Alloy's own logs, which could create a feedback loop.
+  stage.drop {
+    source     = "container_name"
+    expression = "alloy"
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

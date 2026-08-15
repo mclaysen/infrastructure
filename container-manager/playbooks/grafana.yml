@@ -73,3 +73,16 @@
           isDefault: true
           uid: "{{ grafana_prometheus_datasource_uid }}"
       no_log: true
+
+    - name: Create Grafana datasource for Loki
+      grafana.grafana.datasource:
+        grafana_url: '{{ grafana_url }}'
+        grafana_api_key: '{{ grafana_api_key }}'
+        state: present
+        dataSource:
+          name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          uid: loki
+      no_log: true
