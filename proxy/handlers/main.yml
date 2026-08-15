@@ -3,3 +3,13 @@
   ansible.builtin.service:
     name: nginx
     state: restarted
+
+- name: restart alloy
+  ansible.builtin.systemd:
+    name: alloy
+    state: restarted
+
+- name: restart nginx prometheus exporter
+  ansible.builtin.systemd:
+    name: nginx-prometheus-exporter
+    state: restarted

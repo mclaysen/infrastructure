@@ -1,0 +1,46 @@
+// Tail the proxy's Nginx access and error logs.
+local.file_match "nginx" {
+  path_targets = [
+    {
+      __path__ = "/var/log/nginx/access.log",
+      job      = "nginx_access",
+      instance = constants.hostname,
+    },
+    {
+      __path__ = "/var/log/nginx/*_access.log",
+      job      = "nginx_access",
+      instance = constants.hostname,
+    },
+    {
+      __path__ = "/var/log/nginx/error.log",
+      job      = "nginx_error",
+      instance = constants.hostname,
+    },
+    {
+      __path__ = "/var/log/nginx/*_error.log",
+      job      = "nginx_error",
+      instance = constants.hostname,
+    },
+  ]
+}
+
+loki.source.file "nginx" {
+  targets    = local.file_match.nginx.targets
+  forward_to = [loki.process.nginx.receiver]
+}
+
+loki.process "nginx" {
+  forward_to = [loki.write.central.receiver]
+
+  stage.static_labels {
+    values = {
+      source = "nginx_proxy",
+    }
+  }
+}
+
+loki.write "central" {
+  endpoint {
+    url = "{{ loki_push_url }}"
+  }
+}

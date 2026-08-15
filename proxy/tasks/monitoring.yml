@@ -1,0 +1,88 @@
+---
+- name: Ensure Grafana APT keyring directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Install Grafana APT signing key
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg-full.key
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: '0644'
+
+- name: Configure Grafana APT repository
+  ansible.builtin.apt_repository:
+    repo: deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main
+    filename: grafana
+    state: present
+
+- name: Install Alloy and Nginx Prometheus exporter
+  ansible.builtin.apt:
+    name:
+      - alloy
+      - prometheus-nginx-exporter
+    state: present
+    update_cache: true
+
+- name: Verify Nginx includes the stub status module
+  ansible.builtin.command: nginx -V
+  register: nginx_build
+  changed_when: false
+
+- name: Assert Nginx stub status module is available
+  ansible.builtin.assert:
+    that: >-
+      '--with-http_stub_status_module' in nginx_build.stderr or
+      '--with-http_stub_status_module' in nginx_build.stdout
+    fail_msg: The installed Nginx build does not include ngx_http_stub_status_module.
+
+- name: Deploy Nginx stub status configuration
+  ansible.builtin.template:
+    src: ../templates/nginx_status.conf.j2
+    dest: /etc/nginx/conf.d/status.conf
+    mode: '0644'
+  notify: restart nginx
+
+- name: Validate Nginx configuration with stub status enabled
+  ansible.builtin.command: nginx -t
+  register: nginx_test_status
+  changed_when: false
+  failed_when: nginx_test_status.rc != 0
+
+- name: Deploy Alloy configuration
+  ansible.builtin.template:
+    src: ../templates/alloy_config.alloy.j2
+    dest: /etc/alloy/config.alloy
+    mode: '0644'
+  notify: restart alloy
+
+- name: Allow Alloy to read Nginx logs
+  ansible.builtin.user:
+    name: alloy
+    groups: adm
+    append: true
+  notify: restart alloy
+
+- name: Deploy Nginx Prometheus exporter service
+  ansible.builtin.template:
+    src: ../templates/nginx-prometheus-exporter.service.j2
+    dest: /etc/systemd/system/nginx-prometheus-exporter.service
+    mode: '0644'
+  notify: restart nginx prometheus exporter
+
+- name: Reload systemd daemon after exporter service changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Alloy
+  ansible.builtin.systemd:
+    name: alloy
+    enabled: true
+    state: started
+
+- name: Enable and start Nginx Prometheus exporter
+  ansible.builtin.systemd:
+    name: nginx-prometheus-exporter
+    enabled: true
+    state: started

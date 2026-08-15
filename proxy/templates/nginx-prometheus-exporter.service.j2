@@ -1,0 +1,13 @@
+[Unit]
+Description=Prometheus exporter for Nginx stub_status
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/prometheus-nginx-exporter --nginx.scrape-uri=http://127.0.0.1:8080/stub_status --web.listen-address={{ nginx_prometheus_exporter_listen_address }}:{{ nginx_prometheus_exporter_port }}
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

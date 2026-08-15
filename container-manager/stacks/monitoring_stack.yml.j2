@@ -62,6 +62,8 @@ services:
     container_name: loki
     restart: unless-stopped
     command: -config.file=/etc/loki/loki-config.yaml
+    ports:
+      - "{{ container_manager_host_ip }}:{{ loki_host_port }}:3100"
     volumes:
       - {{ loki_config_path }}:/etc/loki/loki-config.yaml:ro
       - loki_data:/loki

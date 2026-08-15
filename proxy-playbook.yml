@@ -48,3 +48,6 @@
 
     - name: Configure NGINX sites
       ansible.builtin.import_tasks: proxy/tasks/nginx_set_sites.yml
+
+    - name: Configure proxy monitoring
+      ansible.builtin.import_tasks: proxy/tasks/monitoring.yml
