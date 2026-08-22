@@ -11,6 +11,17 @@ scrape_configs:
     static_configs:
       - targets: ["unpoller:9130"]
 
+  - job_name: photon
+    static_configs:
+      - targets: ["photon:2322"]
+
+  - job_name: dawarich
+    basic_auth:
+      username: "{{ dawarich_metrics_username }}"
+      password: "{{ dawarich_metrics_password }}"
+    static_configs:
+      - targets: ["dawarich_app:3000"]
+
   - job_name: node_exporter
     static_configs:
       - targets: ["host.docker.internal:9100"]

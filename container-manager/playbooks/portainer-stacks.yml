@@ -6,6 +6,7 @@
     - ansible.builtin.import_tasks: ../handlers/main.yml
   vars_files:
     - ../../group_vars/portainer_managers/vars.yml
+    - ../../group_vars/portainer_managers/vault.yml
   tasks:
     - name: Create monitoring config directory
       ansible.builtin.file:
@@ -293,6 +294,19 @@
         portainer_url: "{{ portainer_url }}"
         portainer_token: "{{ portainer_token }}"
         name: protonmail-network
+        driver: bridge
+        endpoint_id: "{{ endpoint_id }}"
+        state: present
+        internal: false
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Create network for monitoring
+      bgtor.portainer.portainer_network:
+        portainer_url: "{{ portainer_url }}"
+        portainer_token: "{{ portainer_token }}"
+        name: monitoring-network
         driver: bridge
         endpoint_id: "{{ endpoint_id }}"
         state: present

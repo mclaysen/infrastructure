@@ -102,4 +102,5 @@ volumes:
   alloy_data: {}
 networks:
   monitoring-network:
-    driver: bridge
+    name: monitoring-network
+    external: true
