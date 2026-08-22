@@ -30,6 +30,7 @@
         owner: "{{ username }}"
         group: "{{ username }}"
         mode: '0644'
+      notify: Restart newt
 
     - name: Create temporary directory for rendered stack files
       ansible.builtin.file:
