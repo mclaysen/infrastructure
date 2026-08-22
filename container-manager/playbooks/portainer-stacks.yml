@@ -178,15 +178,15 @@
           - name: mail__transport
             value: SMTP
           - name: mail__options__host
-            value: protonmail-bridge
+            value: "{{ email_domain }}"
           - name: mail__options__port
-            value: "25"
+            value: "{{ email_port }}"
           - name: mail__options__secure
             value: "false"
           - name: mail__options__auth__user
-            value: "{{ ghost_email_user }}"
+            value: "{{ email_user }}"
           - name: mail__options__auth__pass
-            value: "{{ ghost_email_password }}"
+            value: "{{ email_password }}"
           - name: mail__from
             value: "{{ ghost_email_from }}"
           - name: UPLOAD_LOCATION
@@ -202,6 +202,51 @@
         env:
           - name: PROTONMAIL_KEYRING_PASSPHRASE
             value: "{{ PROTONMAIL_KEYRING_PASSPHRASE }}"
+        prune: true
+        pull_images: true
+      - name: dawarich
+        template: ../stacks/dawarich.yml.j2
+        stack_type: standalone
+        endpoint_id: "{{ endpoint_id }}"
+        env:
+          - name: POSTGRES_PASSWORD
+            value: "{{ dawarich_postgres_password }}"
+          - name: DATABASE_PASSWORD
+            value: "{{ dawarich_postgres_password }}"
+          - name: DAWARICH_APP_PORT
+            value: "{{ dawarich_app_port }}"
+          - name: APPLICATION_HOSTS
+            value: "{{ dawarich_application_hosts }}"
+          - name: TIME_ZONE
+            value: "{{ timezone }}"
+          - name: SECRET_KEY_BASE
+            value: "{{ dawarich_secret_key_base }}"
+          - name: PROMETHEUS_EXPORTER_ENABLED
+            value: "{{ dawarich_prometheus_exporter_enabled }}"
+          - name: METRICS_USERNAME
+            value: "{{ dawarich_metrics_username }}"
+          - name: METRICS_PASSWORD
+            value: "{{ dawarich_metrics_password }}"
+          - name: DOMAIN
+            value: "{{ dawarich_domain }}"
+          - name: APPLICATION_PROTOCOL
+            value: "{{ dawarich_application_protocol | default('http') }}"
+          - name: SMTP_SERVER
+            value: "{{ email_domain }}"
+          - name: SMTP_PORT
+            value: "{{ email_port }}"
+          - name: SMTP_DOMAIN
+            value: "{{ domain }}"
+          - name: SMTP_USERNAME
+            value: "{{ email_user }}"
+          - name: SMTP_PASSWORD
+            value: "{{ email_password }}"
+          - name: SMTP_FROM
+            value: "{{ email_address }}"
+          - name: SMTP_AUTHENTICATION
+            value: "{{ dawarich_smtp_authentication | default('plain') }}"
+          - name: SMTP_STARTTLS
+            value: "{{ dawarich_smtp_starttls | default('true') }}"
         prune: true
         pull_images: true
   tasks:

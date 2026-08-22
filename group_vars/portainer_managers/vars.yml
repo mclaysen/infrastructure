@@ -104,6 +104,19 @@ ghost_admin_domain: ghost.mclaysen.com
 ghost_domain: blog.mclaysen.com
 ghost_email_from: "notifications@{{ domain }}"
 
+#dawarich
+dawarich_app_port: 3003
+dawarich_application_hosts: localhost,::1,127.0.0.1,maps.mclaysen.com
+dawarich_prometheus_exporter_enabled: true
+dawarich_metrics_username: prometheus
+dawarich_domain: maps.{{ domain }}
+dawarich_smtp_starttls: "false"
+dawarich_smtp_authentication: plain
+
+#email settings
+email_domain: protonmail-bridge
+email_port: 25
+
 sudoers_file_path: /etc/sudoers
 
 security_ssh_config_path: /etc/ssh/sshd_config
