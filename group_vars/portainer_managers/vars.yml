@@ -106,7 +106,7 @@ ghost_email_from: "notifications@{{ domain }}"
 
 #dawarich
 dawarich_app_port: 3003
-dawarich_application_hosts: localhost,::1,127.0.0.1,maps.mclaysen.com,192.168.86.202
+dawarich_application_hosts: localhost,::1,127.0.0.1,maps.mclaysen.com,192.168.86.202,dawarich_app:3000
 dawarich_prometheus_exporter_enabled: true
 dawarich_metrics_username: prometheus
 dawarich_domain: maps.{{ domain }}
