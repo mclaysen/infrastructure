@@ -16,8 +16,10 @@
     app_domain: "{{ site.app_domain }}"
     ssl_cert_path: "{{ site.ssl_cert_path }}"
     ssl_key_path: "{{ site.ssl_key_path }}"
-    app_proxy_buffering: "{{ site_settings.app_proxy_buffering }}"
     app_max_body_size: "{{ site_settings.app_max_body_size }}"
+    app_max_buffer_size: "{{ site_settings.app_max_buffer_size }}"
+    app_timeouts: "{{ site_settings.app_timeouts }}"
+    app_proxy_buffering: "{{ site_settings.app_proxy_buffering }}"
   notify: restart nginx
 
 - name: Deploy Home Assistant nginx site

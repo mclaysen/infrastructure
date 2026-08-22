@@ -43,14 +43,17 @@ domain: mclaysen.com
 app_defaults:
   app_proxy_buffering: "off"
   app_max_body_size: 1M
+  app_max_buffer_size: 16k
+  app_timeouts: 60s
 
 sites:
   - app_name: photos
     app_domain: photos.mclaysen.com
-    app_backend: http://192.168.86.200:20800
+    app_backend: http://192.168.86.202:2283
     settings:
-      app_proxy_buffering: "on"
-      app_max_body_size: 500M
+      app_max_body_size: 50000M
+      app_max_buffer_size: 1024k
+      app_timeouts: 600s
     ssl_cert_path: /etc/letsencrypt/live/mclaysen.com/fullchain.pem
     ssl_key_path: /etc/letsencrypt/live/mclaysen.com/privkey.pem
   - app_name: homebridge

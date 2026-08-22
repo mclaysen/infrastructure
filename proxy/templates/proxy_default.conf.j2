@@ -24,6 +24,16 @@ server {
     access_log /var/log/nginx/{{app_name}}_access.log;
     error_log /var/log/nginx/{{app_name}}_error.log warn;
 
+    proxy_request_buffering {{ app_proxy_buffering }};
+    client_max_body_size    {{ app_max_body_size }};
+    client_body_buffer_size {{ app_max_buffer_size }};
+
+    proxy_read_timeout {{ app_timeouts }};
+    proxy_send_timeout {{ app_timeouts }};
+    send_timeout       {{ app_timeouts }};
+
+    proxy_redirect     off;
+
     location / {
         proxy_pass {{ app_backend_scheme }}://{{ app_name }}_backend;
 
@@ -35,8 +45,5 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
-        
-        proxy_buffering {{ app_proxy_buffering }};
-        client_max_body_size {{ app_max_body_size }};
     }
 }
