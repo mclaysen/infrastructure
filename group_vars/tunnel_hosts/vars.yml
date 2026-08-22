@@ -4,12 +4,12 @@ timezone: America/New_York
 domain: mclaysen.com
 email_address: me@mclaysen.com
 
-pangolin_version: ee-1.18.4
-traefik_version: 3.6.20
-gerbil_version: 1.4.1
-badger_version: v1.4.0
-loki_version: 3.6.7
-alloy_version: v1.14.1
+pangolin_version: ee-1.21.1
+traefik_version: 3.7.10
+gerbil_version: 1.4.3
+badger_version: v1.5.0
+loki_version: 3.7.6
+alloy_version: v1.18.1
 
 deploy_user_name: deployUser
 deployuser_ssh_public_key_path: ~/.ssh/rack_nerd_vps1.pub
