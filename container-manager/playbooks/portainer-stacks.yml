@@ -180,7 +180,7 @@
           - name: mail__options__host
             value: "{{ email_domain }}"
           - name: mail__options__port
-            value: "{{ email_port }}"
+            value: "{{ email_port | string }}"
           - name: mail__options__secure
             value: "false"
           - name: mail__options__auth__user
@@ -214,7 +214,7 @@
           - name: DATABASE_PASSWORD
             value: "{{ dawarich_postgres_password }}"
           - name: DAWARICH_APP_PORT
-            value: "{{ dawarich_app_port }}"
+            value: "{{ dawarich_app_port | string }}"
           - name: APPLICATION_HOSTS
             value: "{{ dawarich_application_hosts }}"
           - name: TIME_ZONE
@@ -222,7 +222,7 @@
           - name: SECRET_KEY_BASE
             value: "{{ dawarich_secret_key_base }}"
           - name: PROMETHEUS_EXPORTER_ENABLED
-            value: "{{ dawarich_prometheus_exporter_enabled }}"
+            value: "{{ dawarich_prometheus_exporter_enabled | string | lower }}"
           - name: METRICS_USERNAME
             value: "{{ dawarich_metrics_username }}"
           - name: METRICS_PASSWORD
@@ -234,7 +234,7 @@
           - name: SMTP_SERVER
             value: "{{ email_domain }}"
           - name: SMTP_PORT
-            value: "{{ email_port }}"
+            value: "{{ email_port | string }}"
           - name: SMTP_DOMAIN
             value: "{{ domain }}"
           - name: SMTP_USERNAME
