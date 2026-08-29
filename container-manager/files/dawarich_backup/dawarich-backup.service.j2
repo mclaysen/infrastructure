@@ -1,0 +1,10 @@
+[Unit]
+Description=Dawarich Restic backup
+RequiresMountsFor={{ dawarich_backup_mount_point }}
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=RESTIC_PASSWORD_FILE=/etc/restic/dawarich_password
+ExecStart={{ dawarich_backup_script_path }}

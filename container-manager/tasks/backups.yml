@@ -1,13 +1,16 @@
 ---
-- name: Mount the truenas nfs share for backups for immich
+- name: Mount the truenas nfs share for backups for immich and dawarich
   ansible.posix.mount:
-    src: "{{ immich_backup_nfs_share }}"
-    path: "{{ immich_backup_mount_point }}"
+    src: "{{ item.src }}"
+    path: "{{ item.path }}"
     fstype: nfs
     opts: rw
     state: mounted
+  loop:
+    - {src: "{{ immich_backup_nfs_share }}", path: "{{ immich_backup_mount_point }}"}
+    - {src: "{{ dawarich_backup_nfs_share }}", path: "{{ dawarich_backup_mount_point }}"}
 
-- name: Verify restic is insalled
+- name: Verify restic is installed
   ansible.builtin.command:
     cmd: restic version
   register: restic_version
@@ -19,16 +22,22 @@
 
 - name: Create directory for password file if it does not exist
   ansible.builtin.file:
-    path: "{{ immich_restic_password_file | dirname }}"
+    path: "{{ item | dirname }}"
     state: directory
     mode: '0700'
+  loop:
+    - "{{ immich_restic_password_file }}"
+    - "{{ dawarich_restic_password_file }}"
 
-- name: Create password file for restic immich repository
+- name: Create password file for restic immich and dawarich repos
   ansible.builtin.copy:
-    dest: "{{ immich_restic_password_file }}"
-    content: "{{ immich_restic_password }}"
+    dest: "{{ item.file }}"
+    content: "{{ item.content }}"
     mode: '0600'
   no_log: true
+  loop:
+    - { file: "{{ immich_restic_password_file }}", content: "{{ immich_restic_password }}"}
+    - { file: "{{ dawarich_restic_password_file }}", content: "{{ dawarich_restic_password }}" }
 
 - name: Check whether the Restic repository is initialized
   ansible.builtin.stat:
@@ -42,10 +51,30 @@
     RESTIC_PASSWORD_FILE: "{{ immich_restic_password_file }}"
   when: not immich_restic_repository_config.stat.exists
 
+- name: Check whether the Restic repository is initialized for Dawarich
+  ansible.builtin.stat:
+    path: "{{ dawarich_restic_path }}/config"
+  register: dawarich_restic_repository_config
+
+- name: Initialize Restic repository for Dawarich backups
+  ansible.builtin.command:
+    cmd: restic init --repo {{ dawarich_restic_path }}
+  environment:
+    RESTIC_PASSWORD_FILE: "{{ dawarich_restic_password_file }}"
+  when: not dawarich_restic_repository_config.stat.exists
+
 - name: Create immich backup script
   ansible.builtin.template:
     src: container-manager/files/immich_backup/immich-backup.sh.j2
     dest: "{{ immich_backup_script_path }}"
+    mode: '0700'
+    owner: root
+    group: root
+
+- name: Create dawarich backup script
+  ansible.builtin.template:
+    src: container-manager/files/dawarich_backup/dawarich-backup.sh.j2
+    dest: "{{ dawarich_backup_script_path }}"
     mode: '0700'
     owner: root
     group: root
@@ -58,10 +87,26 @@
     owner: root
     group: root
 
+- name: Ensure dawarich systemd service file template exists
+  ansible.builtin.template:
+    src: container-manager/files/dawarich_backup/dawarich-backup.service.j2
+    dest: /etc/systemd/system/dawarich-backup.service
+    mode: '0644'
+    owner: root
+    group: root
+
 - name: Ensure immich timer file is placed in systemd directory
   ansible.builtin.copy:
     src: container-manager/files/immich_backup/immich-backup.timer
     dest: /etc/systemd/system/immich-backup.timer
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Ensure dawarich timer file is placed in systemd directory
+  ansible.builtin.copy:
+    src: container-manager/files/dawarich_backup/dawarich-backup.timer
+    dest: /etc/systemd/system/dawarich-backup.timer
     mode: '0644'
     owner: root
     group: root
@@ -73,5 +118,11 @@
 - name: Enable and start immich backup timer
   ansible.builtin.systemd:
     name: immich-backup.timer
+    enabled: true
+    state: started
+
+- name: Enable and start dawarich backup timer
+  ansible.builtin.systemd:
+    name: dawarich-backup.timer
     enabled: true
     state: started

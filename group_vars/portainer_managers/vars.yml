@@ -112,6 +112,11 @@ dawarich_metrics_username: prometheus
 dawarich_domain: maps.{{ domain }}
 dawarich_smtp_starttls: "false"
 dawarich_smtp_authentication: plain
+dawarich_backup_nfs_share: 192.168.86.200:/mnt/philbert/application_backup/dawarich
+dawarich_backup_mount_point: /mnt/truenas_shares/dawarich_backups
+dawarich_restic_password_file: /etc/restic/dawarich_password
+dawarich_restic_path: "{{ dawarich_backup_mount_point }}/restic-repo"
+dawarich_backup_script_path: /usr/local/bin/dawarich-backup.sh
 
 #email settings
 email_domain: protonmail-bridge

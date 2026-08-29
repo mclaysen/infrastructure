@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TEMP_DIR=$(mktemp -d)
+BACKUP_MOUNT="{{ dawarich_backup_mount_point }}"
+LOG_FILE="${TEMP_DIR}/dawarich-backup.log"
+BACKUP_FILE="${TEMP_DIR}/dawarich-db-$(date +%Y-%m-%d_%H-%M-%S).sql.gz"
+CONTAINERS_STOPPED=false
+
+export RESTIC_REPOSITORY="{{ dawarich_restic_path }}"
+export RESTIC_CACHE_DIR="/var/cache/restic/dawarich"
+
+mkdir -p "${RESTIC_CACHE_DIR}"
+exec >> "${LOG_FILE}" 2>&1
+
+log() {
+	echo "$(date --iso-8601=seconds) dawarich-backup: $*"
+}
+
+trap 'log "Backup failed"' ERR
+
+# Do not create a repository on the host disk if the NFS mount is unavailable.
+log "Checking backup mount"
+mountpoint -q "${BACKUP_MOUNT}"
+
+# Always bring Dawarich back up, even if dumping or backing up fails.
+onExit() {
+    if [ "$CONTAINERS_STOPPED" = true ]; then
+        docker start dawarich_app dawarich_sidekiq >/dev/null 2>&1
+        log "Dawarich app and Sidekiq started"
+    fi
+
+    #append the log file to the backup mount for later inspection
+    cat "${LOG_FILE}" >> "${BACKUP_MOUNT}/dawarich-backup.log"
+
+    log "Cleaning up temporary files"
+    rm -rf "${TEMP_DIR}"
+}
+trap onExit EXIT
+
+log "Stopping Dawarich Sidekiq and app"
+docker stop dawarich_sidekiq dawarich_app
+#noting that containers may not have actually stopped, but we will assume they did for the purposes of this backup script
+CONTAINERS_STOPPED=true
+
+# Back up a logical database dump, not the live PostgreSQL data directory.
+if docker exec dawarich_db pg_isready --username=postgres; then
+    log "Creating PostgreSQL database dump"
+    docker exec dawarich_db \
+        pg_dumpall --clean --if-exists --username=postgres \
+        | gzip > "${BACKUP_FILE}"
+else
+    log "PostgreSQL is not ready, skipping database dump"
+    exit 1
+fi
+
+log "Backing up Dawarich files to Restic"
+restic backup "${BACKUP_FILE}" \
+    --verbose \
+    --tag dawarich-backup
+
+
+log "Applying Restic retention policy"
+restic forget \
+    --keep-weekly 4 --keep-monthly 3 --keep-hourly 6 --prune --tag dawarich-backup
+log "Backup completed successfully"
