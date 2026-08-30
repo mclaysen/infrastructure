@@ -15,7 +15,7 @@
         mode: '0755'
         recurse: true
 
-    - name: Create logging config directories
+    - name: Create monitoring config directories
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -25,6 +25,7 @@
       loop:
         - "{{ alloy_config_dir }}"
         - "{{ loki_config_path | ansible.builtin.dirname }}"
+        - "{{ blackbox_exporter_config_path | ansible.builtin.dirname }}"
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -69,6 +70,14 @@
       ansible.builtin.template:
         src: ../templates/loki_config.yml.j2
         dest: "{{ loki_config_path }}"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Place Blackbox Exporter configuration
+      ansible.builtin.template:
+        src: ../templates/blackbox_config.yml.j2
+        dest: "{{ blackbox_exporter_config_path }}"
         mode: '0644'
         owner: "{{ username }}"
         group: "{{ username }}"

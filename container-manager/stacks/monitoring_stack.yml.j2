@@ -75,6 +75,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+  blackbox:
+    image: prom/blackbox-exporter:{{ blackbox_exporter_version }}
+    container_name: blackbox
+    restart: unless-stopped
+    expose:
+      - "9115"
+    volumes:
+      - {{ blackbox_exporter_config_path }}:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - monitoring-network
   alloy:
     image: grafana/alloy:{{ alloy_version }}
     container_name: alloy

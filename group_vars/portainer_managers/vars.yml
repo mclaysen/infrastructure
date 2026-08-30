@@ -148,3 +148,7 @@ security_sudoers_passworded: []
 security_autoupdate_enabled: true
 security_autoupdate_blacklist: []
 security_autoupdate_additional_origins: []
+
+# Blackbox Exporter configuration
+blackbox_exporter_version: v0.28.0
+blackbox_exporter_config_path: /home/{{ username }}/docker/monitoring/blackbox/blackbox_config.yml
