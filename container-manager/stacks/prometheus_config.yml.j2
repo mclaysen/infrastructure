@@ -49,6 +49,17 @@ scrape_configs:
     static_configs:
       - targets:
         - https://mclaysen.com
+        - https://blog.mclaysen.com
+        - https://media.mclaysen.com
+        - https://pangolin.mclaysen.com
+        - https://vps-dashboard.mclaysen.com
+        - https://fundamentalhealthmi.com
+        - https://container-manager.mclaysen.com
+        - https://router.mclaysen.com
+        - https://photos.mclaysen.com
+        - https://hass.mclaysen.com
+        - https://nas.mclaysen.com
+        - https://nas2.mclaysen.com
     relabel_configs:
     - source_labels: [__address__]
       target_label: __param_target
