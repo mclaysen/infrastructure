@@ -58,7 +58,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: snmp-exporter:9116
+        replacement: snmp_exporter:9116
 
   - job_name: blackbox_http2xx
     metrics_path: /probe
