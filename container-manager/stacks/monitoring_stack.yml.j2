@@ -1,4 +1,14 @@
 services:
+  snmp_exporter:
+    image: prom/snmp-exporter:{{ snmp_exporter_version }}
+    container_name: snmp_exporter
+    restart: unless-stopped
+    expose:
+      - "9116"
+    volumes:
+      - {{ snmp_exporter_config_path }}:/etc/snmp_exporter/snmp.yml:ro
+    networks:
+      - monitoring-network
   prometheus:
     container_name: prometheus
     image: prom/prometheus:{{ prometheus_version }}
