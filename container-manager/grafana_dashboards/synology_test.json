@@ -555,23 +555,7 @@
           },
           "unit": "percent"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "Volume.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "dark-blue",
-                  "mode": "thresholds"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -603,7 +587,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100-(100/raidTotalSize{job=~'$job',instance=~'$instance',raidName=\"Volume 1\"}*raidFreeSize{job=~'$job',instance=~'$instance',raidName=\"Volume 1\"})",
+          "expr": "100-(100/raidTotalSize{job=~'$job',instance=~'$instance'}*raidFreeSize{job=~'$job',instance=~'$instance'})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -613,7 +597,7 @@
           "step": 240
         }
       ],
-      "title": "Volume 1 Usage %",
+      "title": "Raid Usage %",
       "type": "gauge"
     },
     {
@@ -4814,6 +4798,6 @@
   "timezone": "browser",
   "title": "Synology SNMP",
   "uid": "RT8yFrEVz",
-  "version": 1,
+  "version": 2,
   "weekStart": "monday"
 }
