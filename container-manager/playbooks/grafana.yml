@@ -49,6 +49,24 @@
       loop_control:
         label: "{{ item | basename }}"
 
+    - name: Find deployed Grafana dashboards
+      ansible.builtin.find:
+        paths: "{{ grafana_dashboards_path }}"
+        patterns: "*.json"
+        file_type: file
+        recurse: false
+      register: deployed_grafana_dashboards
+
+    - name: Remove Grafana dashboards no longer in the repository
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ deployed_grafana_dashboards.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path | basename not in (query('ansible.builtin.fileglob', playbook_dir ~ '/../grafana_dashboards/*.json') | map('basename') | list)
+      notify: Restart Grafana container
+
     - name: Wait for Grafana to be ready
       ansible.builtin.uri:
         url: "{{ grafana_url }}/healthz"

@@ -1,5 +1,5 @@
 auths:
-  network_v3_authpriv:
+  syno_v3:
     version: 3
     security_level: authPriv
     username: "{{ snmp_synology_username }}"
@@ -7,14 +7,21 @@ auths:
     auth_password: "{{ snmp_synology_password }}"
     priv_protocol: AES
     priv_password: "{{ snmp_synology_privacy_password }}"
-
 modules:
   synology:
     walk:
-      - system
-      - host
-      - interfaces
-      - 1.3.6.1.4.1.6574
+      - 1.3.6.1.2.1.2             # network statistics
+      - 1.3.6.1.2.1.25.1          # host system statistics
+      - 1.3.6.1.2.1.31.1.1        # The total number received/transmitted of the interface
+      - 1.3.6.1.4.1.2021.4        # RAM statistics
+      - 1.3.6.1.4.1.2021.10.1.2   # 1,5 and 15 minute names
+      - 1.3.6.1.4.1.2021.10.1.5   # The 1,5 and 15 minute load averages
+      - 1.3.6.1.4.1.2021.11       # CPU statistics
+      - 1.3.6.1.4.1.2021.13.15.1  # HDD statistics
+      - 1.3.6.1.4.1.6574.1        # displays all system statuses
+      - 1.3.6.1.4.1.6574.2        # information regarding hard drives e.g Temperature
+      - 1.3.6.1.4.1.6574.3        # monitoring RAID status
+      - 1.3.6.1.4.1.6574.6        # the number of users logging in
     lookups:
       - source_indexes: [ifIndex]
         lookup: ifDescr
@@ -22,3 +29,10 @@ modules:
         lookup: diskModel
       - source_indexes: [raidIndex]
         lookup: raidName
+      - source_indexes: [serviceInfoIndex]
+        lookup: serviceName
+        drop_source_indexes: true
+
+    overrides:
+      SYNOLOGY-SERVICES-MIB::serviceName:
+        type: DisplayString
