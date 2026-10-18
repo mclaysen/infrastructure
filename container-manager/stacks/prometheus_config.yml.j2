@@ -43,8 +43,8 @@ scrape_configs:
       - targets: ["{{ nginx_prometheus_exporter_target }}"]
 
   - job_name: synology_snmp
-    scrape_interval: 120s
-    scrape_timeout: 60s
+    scrape_interval: 180s
+    scrape_timeout: 100s
     static_configs:
       - targets:
         - '{{ synology_ip }}'
