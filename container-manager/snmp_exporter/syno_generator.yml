@@ -1,0 +1,24 @@
+auths:
+  network_v3_authpriv:
+    version: 3
+    security_level: authPriv
+    username: "{{ snmp_synology_username }}"
+    auth_protocol: MD5
+    auth_password: "{{ snmp_synology_password }}"
+    priv_protocol: AES
+    priv_password: "{{ snmp_synology_privacy_password }}"
+
+modules:
+  synology:
+    walk:
+      - system
+      - host
+      - interfaces
+      - 1.3.6.1.4.1.6574
+    lookups:
+      - source_indexes: [ifIndex]
+        lookup: ifDescr
+      - source_indexes: [diskIndex]
+        lookup: diskModel
+      - source_indexes: [raidIndex]
+        lookup: raidName
