@@ -31,24 +31,22 @@ loki.source.docker "local" {
   forward_to    = [loki.process.docker_logs.receiver]
 }
 
-//read synology syslog
-loki.source.syslog "synology" {
+loki.source.syslog "syslog_receiver" {
   listener {
     address = "0.0.0.0:9514"
     use_rfc5424_message = true
     protocol = "udp"
     labels = {
-      source = "synology",
-      component = "alloy.syslog",
+      source = "remote_syslog",
     }
     label_structured_data = true
   }
-  relabel_rules = loki.relabel.synology_syslog.rules
-  forward_to = [loki.process.synology.receiver]
+  relabel_rules = loki.relabel.syslog_relabel.rules
+  forward_to = [loki.process.syslog_router.receiver]
 }
 
-loki.relabel "synology_syslog" {
-  forward_to = [loki.process.synology.receiver]
+loki.relabel "syslog_relabel" {
+  forward_to = [loki.process.syslog_router.receiver]
 
   rule {
     action = "labelmap"
@@ -57,7 +55,28 @@ loki.relabel "synology_syslog" {
 }
 
 
-loki.process "synology" {
+loki.process "syslog_router" {
+  stage.match {
+    selector = "{connection_ip_address = \"{{ synology_ip }}\"}"
+
+    stage.static_labels {
+      values= {
+        service_name = "synology.nas2",
+        container = "syslog",
+      }
+    }
+  }
+  stage.match {
+    selector = "{connection_ip_address = \"{{ truenas_ip }}\"}"
+
+    stage.static_labels {
+      values= {
+        service_name = "truenas.nas",
+        container = "syslog",
+      }
+    }
+  }
+
   forward_to = [loki.write.default.receiver]
   // Drop any unwanted logs if necessary.
 }
