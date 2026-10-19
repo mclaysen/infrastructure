@@ -131,6 +131,8 @@ services:
   dawarich_sidekiq:
     image: freikin/dawarich:1.15.3@sha256:589e3606b11b61c3fa2d9661832cb73645a9b93a9cc7d807a071e2bc6c584498
     container_name: dawarich_sidekiq
+    expose:
+      - 9394
     volumes:
       - dawarich_public:/var/app/public
       - dawarich_watched:/var/app/tmp/imports/watched
@@ -159,7 +161,9 @@ services:
       # temporarily for large imports.
       BACKGROUND_PROCESSING_CONCURRENCY: ${BACKGROUND_PROCESSING_CONCURRENCY:-3}
       APPLICATION_PROTOCOL: ${APPLICATION_PROTOCOL:-http}
-      PROMETHEUS_EXPORTER_ENABLED: false
+      PROMETHEUS_EXPORTER_ENABLED: ${PROMETHEUS_EXPORTER_ENABLED:-false}
+      METRICS_USERNAME: ${METRICS_USERNAME:?METRICS_USERNAME environment variable is required}
+      METRICS_PASSWORD: ${METRICS_PASSWORD:?METRICS_PASSWORD environment variable is required}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE environment variable is required}
       RAILS_LOG_TO_STDOUT: ${RAILS_LOG_TO_STDOUT:-true}
       SELF_HOSTED: ${SELF_HOSTED:-true}
