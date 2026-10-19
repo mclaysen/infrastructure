@@ -215,10 +215,14 @@ public-resources:
           status: 200
           enabled: true
     rules:
+      - action: deny
+        match: path
+        value: /metrics
+        priority: 1
       - action: allow
         match: country
         value: US
-        priority: 1
+        priority: 2
     auth: 
       sso-enabled: true
       sso-roles:
