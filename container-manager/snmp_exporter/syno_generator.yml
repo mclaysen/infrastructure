@@ -40,6 +40,12 @@ modules:
         type: DisplayString
       SYNOLOGY-DISK-MIB::diskModel:
         type: DisplayString
+      SYNOLOGY-DISK-MIB::diskType:
+        type: DisplayString
+      SYNOLOGY-DISK-MIB::diskName:
+        type: DisplayString
+      SYNOLOGY-DISK-MIB::diskRole:
+        type: DisplayString
       SYNOLOGY-SERVICES-MIB::serviceName:
         type: DisplayString
       SYNOLOGY-SYSTEM-MIB::serialNumber:
