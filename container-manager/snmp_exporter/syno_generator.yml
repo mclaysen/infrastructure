@@ -21,7 +21,7 @@ modules:
       - 1.3.6.1.4.1.6574.1        # displays all system statuses
       - 1.3.6.1.4.1.6574.2        # information regarding hard drives e.g Temperature
       - 1.3.6.1.4.1.6574.3        # monitoring RAID status
-      - 1.3.6.1.4.1.6574.6        # the number of users logging in
+      - 1.3.6.1.4.1.6574.6        # Synology services and service user counts
     lookups:
       - source_indexes: [ifIndex]
         lookup: ifDescr
@@ -32,7 +32,19 @@ modules:
       - source_indexes: [serviceInfoIndex]
         lookup: serviceName
         drop_source_indexes: true
+      - source_indexes: [diskIndex]
+        lookup: diskID
 
     overrides:
+      SYNOLOGY-DISK-MIB::diskID:
+        type: DisplayString
+      SYNOLOGY-DISK-MIB::diskModel:
+        type: DisplayString
       SYNOLOGY-SERVICES-MIB::serviceName:
+        type: DisplayString
+      SYNOLOGY-SYSTEM-MIB::serialNumber:
+        type: DisplayString
+      SYNOLOGY-SYSTEM-MIB::modelName:
+        type: DisplayString
+      SYNOLOGY-RAID-MIB::raidName:
         type: DisplayString
