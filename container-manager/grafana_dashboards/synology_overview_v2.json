@@ -911,7 +911,7 @@
         ]
       },
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 5,
         "x": 0,
         "y": 5
@@ -1254,8 +1254,8 @@
         ]
       },
       "gridPos": {
-        "h": 5,
-        "w": 5,
+        "h": 3,
+        "w": 7,
         "x": 5,
         "y": 5
       },
@@ -1502,9 +1502,9 @@
         ]
       },
       "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 10,
+        "h": 3,
+        "w": 6,
+        "x": 12,
         "y": 5
       },
       "id": 97,
@@ -1729,7 +1729,7 @@
         ]
       },
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 6,
         "x": 18,
         "y": 5
@@ -1845,6 +1845,212 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Overview of the drives",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false,
+            "wrapText": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Normal"
+                },
+                "2": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "Warning"
+                },
+                "3": {
+                  "color": "orange",
+                  "index": 2,
+                  "text": "Critical"
+                },
+                "4": {
+                  "color": "red",
+                  "index": 3,
+                  "text": "Failing"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #D"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 146
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 13,
+        "x": 5,
+        "y": 8
+      },
+      "id": 156,
+      "options": {
+        "cellHeight": "sm",
+        "frameIndex": 3,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "12.3.1",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "diskType{job=~'$job',instance=~'$instance'}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "diskName{job=~'$job',instance=~'$instance'}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "diskRole{job=~'$job',instance=~'$instance'}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "diskHealthStatus{job=~'$job',instance=~'$instance'}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "D"
+        }
+      ],
+      "title": "Disk Overview",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "diskID",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Value #A": true,
+              "Value #B": true,
+              "Value #C": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "__name__ 4": true,
+              "diskIndex 1": true,
+              "diskIndex 2": true,
+              "diskIndex 3": true,
+              "diskIndex 4": true,
+              "diskModel 2": true,
+              "diskModel 3": true,
+              "diskModel 4": true,
+              "diskName": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "instance 4": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "job 4": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value #D": "Health",
+              "diskID": "Disk ID",
+              "diskModel 1": "Model",
+              "diskRole": "Role",
+              "diskType": "Type"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1872,7 +2078,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 12
       },
       "id": 95,
       "options": {
@@ -2082,7 +2288,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 12
       },
       "id": 62,
       "options": {
@@ -2125,7 +2331,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 18
       },
       "id": 66,
       "panels": [],
@@ -2206,7 +2412,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 19
       },
       "id": 136,
       "options": {
@@ -2372,7 +2578,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 19
       },
       "id": 32,
       "options": {
@@ -2511,7 +2717,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 26
       },
       "id": 139,
       "options": {
@@ -2659,7 +2865,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 26
       },
       "id": 144,
       "options": {
@@ -2849,7 +3055,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 33
       },
       "id": 140,
       "options": {
@@ -3005,7 +3211,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 33
       },
       "id": 147,
       "options": {
@@ -3074,7 +3280,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 40
       },
       "id": 106,
       "panels": [],
@@ -3176,7 +3382,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 41
       },
       "id": 89,
       "options": {
@@ -3302,7 +3508,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 41
       },
       "id": 150,
       "options": {
@@ -3411,7 +3617,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 48
       },
       "id": 51,
       "options": {
@@ -3518,7 +3724,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 48
       },
       "id": 153,
       "options": {
@@ -3625,7 +3831,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 55
       },
       "id": 154,
       "options": {
@@ -3728,7 +3934,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 55
       },
       "id": 155,
       "options": {
@@ -3771,7 +3977,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 62
       },
       "id": 78,
       "panels": [],
@@ -3841,7 +4047,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 61
+        "y": 63
       },
       "id": 113,
       "options": {
@@ -3946,7 +4152,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 61
+        "y": 63
       },
       "id": 114,
       "options": {
@@ -4053,7 +4259,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 69
+        "y": 71
       },
       "id": 146,
       "options": {
@@ -4171,7 +4377,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 69
+        "y": 71
       },
       "id": 149,
       "options": {
@@ -4263,7 +4469,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 79
       },
       "id": 55,
       "panels": [],
@@ -4338,7 +4544,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 80
       },
       "id": 112,
       "interval": "5s",
@@ -4506,6 +4712,6 @@
   "timezone": "browser",
   "title": "Synology NAS Overview v2",
   "uid": "RT8yFrEVz",
-  "version": 4,
+  "version": 7,
   "weekStart": "monday"
 }
