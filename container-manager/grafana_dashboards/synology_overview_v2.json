@@ -1928,7 +1928,6 @@
         "sortBy": []
       },
       "pluginVersion": "12.3.1",
-      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
@@ -2606,10 +2605,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "diskIOLA1{job=~'$job',instance=~'$instance'} / 100",
+          "expr": "avg(diskIOLA1{job=~'$job',instance=~'$instance'})",
           "format": "time_series",
           "intervalFactor": 4,
-          "legendFormat": "{{laNames}}",
+          "legendFormat": "One min avg load",
           "range": true,
           "refId": "1m",
           "step": 240
@@ -2620,10 +2619,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "laLoadInt{job=~'$job',instance=~'$instance', laNames=\"Load-5\"} / 100",
+          "expr": "avg(diskIOLA5{job=~'$job',instance=~'$instance'})",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{laNames}}",
+          "legendFormat": "Five min avg load",
           "range": true,
           "refId": "A"
         },
@@ -2633,14 +2632,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "laLoadInt{job=~'$job',instance=~'$instance', laNames=\"Load-15\"} / 100",
+          "expr": "avg(diskIOLA15{job=~'$job',instance=~'$instance'})",
           "hide": false,
-          "legendFormat": "{{laNames}}",
+          "legendFormat": "Fifteen min avg load",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "System Load (minute ave.) - $instance",
+      "title": "Disk Load (minute ave.) - $instance",
       "type": "timeseries"
     },
     {
@@ -4712,6 +4711,6 @@
   "timezone": "browser",
   "title": "Synology NAS Overview v2",
   "uid": "RT8yFrEVz",
-  "version": 7,
+  "version": 8,
   "weekStart": "monday"
 }
