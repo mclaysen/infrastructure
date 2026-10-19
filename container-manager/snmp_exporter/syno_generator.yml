@@ -36,6 +36,8 @@ modules:
         lookup: diskID
 
     overrides:
+      SYNOLOGY_SYSTEM-MIB::version:
+        type: DisplayString
       SYNOLOGY-DISK-MIB::diskID:
         type: DisplayString
       SYNOLOGY-DISK-MIB::diskModel:
