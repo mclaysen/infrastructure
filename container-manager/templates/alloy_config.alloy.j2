@@ -31,6 +31,37 @@ loki.source.docker "local" {
   forward_to    = [loki.process.docker_logs.receiver]
 }
 
+//read synology syslog
+loki.source.syslog "synology" {
+  listener {
+    address = "0.0.0.0:9514"
+    use_rfc5424_message = true
+    protocol = "udp"
+    labels = {
+      source = "synology",
+      component = "alloy.syslog",
+    }
+    label_structured_data = true
+  }
+  relabel_rules = loki.relabel.synology_syslog.rules
+  forward_to = [loki.process.synology.receiver]
+}
+
+loki.relabel "synology_syslog" {
+  forward_to = [loki.process.synology.receiver]
+
+  rule {
+    action = "labelmap"
+    regex  = "__syslog_(.+)"
+  }
+}
+
+
+loki.process "synology" {
+  forward_to = [loki.write.default.receiver]
+  // Drop any unwanted logs if necessary.
+}
+
 loki.process "docker_logs" {
   forward_to = [loki.write.default.receiver]
 
