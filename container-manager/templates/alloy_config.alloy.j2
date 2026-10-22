@@ -41,6 +41,16 @@ loki.source.syslog "syslog_receiver" {
     }
     label_structured_data = true
   }
+  listener {
+    address = "0.0.0.0:5514"
+    protocol = "udp"
+    labels = {
+      source = "remote_syslog",
+      subsource = "unifi",
+    }
+    label_structured_data = true
+    syslog_format = "rfc3164"
+  }
   relabel_rules = loki.relabel.syslog_relabel.rules
   forward_to = [loki.process.syslog_router.receiver]
 }
@@ -72,6 +82,16 @@ loki.process "syslog_router" {
     stage.static_labels {
       values= {
         service_name = "truenas.nas",
+        container = "syslog",
+      }
+    }
+  }
+  stage.match {
+    selector = "{subsource = \"unifi\"}"
+
+    stage.static_labels {
+      values= {
+        service_name = "unifi.device",
         container = "syslog",
       }
     }

@@ -107,6 +107,7 @@ services:
     ports:
       - "12345:12345"
       - "9514:9514/udp"
+      - "5514:5514/udp" #older rfc3164 format handler
     volumes:
       - {{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

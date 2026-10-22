@@ -88,6 +88,7 @@ snmp_exporter_config_path: /home/{{ username }}/docker/monitoring/snmp_exporter/
 snmp_synology_username: snmp_syno
 synology_ip: 192.168.86.103
 truenas_ip: 192.168.86.200
+router_ip: 192.168.86.1
 snmp_truenas_username: snmp_truenas
 
 
