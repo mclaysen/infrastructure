@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+# Set up logging
+LOG_FILE="{{ vm_backup_mount_point }}/vm_backup_$(date +%Y%m%d_%H%M%S).log"
+
+# Function to log messages (both to console and file)
+log_message() {
+    local message="$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    echo "$message" | tee -a "$LOG_FILE"
+}
+
+log_message "Starting VM backup process"
+log_message "Log file: $LOG_FILE"
+
+vms=("{{ home_assistant_vm_name }}" "{{ reverse_proxy_vm_name }}" "{{ container_manager_vm_name }}")
+
+# Arrays to track backup status
+declare -A backup_started
+declare -A backup_completed
+successful_starts=0
+
+backup_run_id="$(date +%Y%m%d_%H%M%S)_$$"
+backup_dir="{{ vm_backup_mount_point }}"
+
+# Start backups and track which ones actually started
+for vm in "${vms[@]}"
+do
+    backup_xml="/tmp/${vm}-backup_${backup_run_id}.xml"
+    backup_file="${backup_dir}/${vm}-${backup_run_id}-vda.backup"
+
+    case "$vm" in
+        "{{ home_assistant_vm_name }}")
+            excluded_backup_disk_xml=""
+            ;;
+        "{{ reverse_proxy_vm_name }}"|"{{ container_manager_vm_name }}")
+            excluded_backup_disk_xml="    <disk name='sda' backup='no'/>"
+            ;;
+        *)
+            log_message "No backup disk layout configured for ${vm}; skipping"
+            backup_started["${vm}"]=0
+            continue
+            ;;
+    esac
+
+    log_message "Backing up ${vm}"
+    if ! cat > "$backup_xml" <<EOF
+<domainbackup>
+  <disks>
+    <disk name='vda' type='file'>
+      <target file='${backup_file}'/>
+      <driver type='qcow2'/>
+    </disk>
+${excluded_backup_disk_xml}
+  </disks>
+</domainbackup>
+EOF
+    then
+        log_message "Failed to create backup configuration for ${vm}"
+        backup_started["${vm}"]=0
+        continue
+    fi
+
+    if virsh -c qemu:///system backup-begin "$vm" "$backup_xml" >> "$LOG_FILE" 2>&1; then
+        rm -f "$backup_xml"
+        backup_started["${vm}"]=1
+        successful_starts=$((successful_starts + 1))
+        log_message "Backup successfully started for ${vm}"
+    else
+        rm -f "$backup_xml"
+        log_message "Failed to start backup for ${vm}"
+        backup_started["${vm}"]=0
+    fi
+done
+
+log_message "Successfully started ${successful_starts} out of {% raw %}${#vms[@]}{% endraw %} VM backups"
+
+# Only wait for VMs that actually started backing up
+COUNT=${successful_starts}
+
+while [ $COUNT -gt 0 ]
+do
+    sleep 3m
+    for vm in "${vms[@]}"
+    do
+        # Only check VMs that started backing up and haven't completed yet
+        if [[ ${backup_started["${vm}"]} -eq 1 && ${backup_completed["${vm}"]} -ne 1 ]]; then
+            log_message "Checking status for ${vm}"
+            STATUS=$(virsh -c qemu:///system domjobinfo ${vm} 2>> "$LOG_FILE")
+
+            if [[ $STATUS == *"None"* ]]; then
+                chown {{ deploy_user_name }}:{{ deploy_user_name }} "${backup_dir}/${vm}-${backup_run_id}-vda.backup" >> "$LOG_FILE" 2>&1
+                backup_completed["${vm}"]=1
+                COUNT=$((COUNT-1))
+                log_message "Backup completed for ${vm}, remaining: ${COUNT}"
+            else
+                log_message "Backup still in progress for ${vm}"
+                echo "  Status: ${STATUS}" >> "$LOG_FILE"
+            fi
+        fi
+    done
+done
+
+# Summary of results
+log_message ""
+log_message "=== Backup Summary ==="
+completed_count=0
+for vm in "${vms[@]}"
+do
+    if [[ ${backup_started["${vm}"]} -eq 1 ]]; then
+        if [[ ${backup_completed["${vm}"]} -eq 1 ]]; then
+            log_message " ${vm}: Successfully completed"
+            completed_count=$((completed_count + 1))
+        else
+            log_message " ${vm}: Started but may not have completed properly"
+        fi
+    else
+        log_message " ${vm}: Failed to start"
+    fi
+done
+
+log_message ""
+log_message "Total VMs: {% raw %}${#vms[@]}{% endraw %}"
+log_message "Successfully started: ${successful_starts}"
+log_message "Successfully completed: ${completed_count}"
+log_message "Backup process finished"
