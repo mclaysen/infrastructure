@@ -19,6 +19,7 @@
 - name: Check whether the Home Assistant disk already exists
   ansible.builtin.stat:
     path: "{{ home_assistant_disk_path }}"
+    get_checksum: false
   register: home_assistant_disk
   tags:
     - home_assistant_vm
