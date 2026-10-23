@@ -44,18 +44,36 @@
 
     - name: Setup cockpit
       ansible.builtin.import_tasks: shared/tasks/setup_cockpit.yml
+      tags:
+        - bootstrap
 
     - name: Setup libvirt
       ansible.builtin.import_tasks: home-server/tasks/initialize_libvirt.yml
+      tags:
+        - bootstrap
 
     - name: Initialize VM bridge
       ansible.builtin.import_tasks: home-server/tasks/intialize_bridge.yml
+      tags:
+        - bootstrap
 
     - name: Create home assistant vm
       ansible.builtin.import_tasks: home-server/tasks/create_home_assistant.yml
+      tags:
+        - bootstrap
 
     - name: Create reverse proxy vm
       ansible.builtin.import_tasks: home-server/tasks/create_reverse_proxy.yml
+      tags:
+        - bootstrap
 
     - name: Create container manager vm
       ansible.builtin.import_tasks: home-server/tasks/create_container_manager.yml
+      tags:
+        - bootstrap
+
+    - name: Mount VM backup directory
+      ansible.builtin.import_tasks: home-server/tasks/mount_vm_share.yml
+
+    - name: Setup VM backup
+      ansible.builtin.import_tasks: home-server/tasks/setup_vm_backup.yml

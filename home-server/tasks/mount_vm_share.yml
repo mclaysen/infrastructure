@@ -1,0 +1,65 @@
+---
+- name: Create group for nas Fileshare
+  ansible.builtin.group:
+    name: "{{ fileshare_group_name }}"
+    state: present
+    gid: "{{ fileshare_group_gid }}"
+
+- name: Add user to nas fileshare group
+  ansible.builtin.user:
+    name: "{{ deploy_user_name }}"
+    groups: "{{ fileshare_group_name }}"
+    append: true
+
+- name: Add qemu user to nas fileshare group
+  ansible.builtin.user:
+    name: qemu
+    groups: "{{ fileshare_group_name }}"
+    append: true
+
+- name: Create virtqemud systemd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/virtqemud.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Add fileshare group to virtqemud service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/virtqemud.service.d/override.conf
+    content: |
+      [Service]
+      Group={{ fileshare_group_name }}
+      SupplementaryGroups={{ fileshare_group_name }}
+    owner: root
+    group: root
+    mode: '0644'
+  register: virtqemud_share_group_override
+
+- name: Reload systemd and restart virtqemud when share access changes
+  ansible.builtin.systemd:
+    name: virtqemud.service
+    daemon_reload: true
+    state: restarted
+  when: virtqemud_share_group_override.changed
+
+- name: Create base NFS mount directory
+  ansible.builtin.file:
+    path: /mnt/truenas_shares
+    state: directory
+    mode: '0755'
+
+- name: Mount the VM backup NFS share
+  ansible.posix.mount:
+    path: "{{ vm_backup_mount_point }}"
+    src: "{{ vm_backup_nfs_share }}"
+    fstype: nfs
+    state: mounted
+    opts: rw
+
+- name: Allow libvirt to access NFS shares
+  ansible.posix.seboolean:
+    name: virt_use_nfs
+    state: true
+    persistent: true

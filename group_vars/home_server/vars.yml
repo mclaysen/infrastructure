@@ -125,3 +125,9 @@ security_sudoers_passworded: []
 security_autoupdate_enabled: true
 security_autoupdate_blacklist: []
 security_autoupdate_additional_origins: []
+
+#nas mount configs
+fileshare_group_name: fileshare_users
+fileshare_group_gid: 3004
+vm_backup_mount_point: /mnt/truenas_shares/vm
+vm_backup_nfs_share: 192.168.86.200:/mnt/philbert/application_backup/vm

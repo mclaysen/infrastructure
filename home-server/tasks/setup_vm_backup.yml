@@ -1,0 +1,15 @@
+- name: Create backup script
+  ansible.builtin.template:
+    src: ../templates/backup_vm.sh.j2
+    dest: /usr/local/bin/backup_vm.sh
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Setup cron job for VM backup
+  ansible.builtin.cron:
+    name: VM backup
+    user: "{{ deploy_user_name }}"
+    job: /usr/local/bin/backup_vm.sh
+    minute: "0"
+    hour: "2"
