@@ -7,6 +7,8 @@ LOG_FILE="{{ vm_backup_mount_point }}/vm_backup_$(date +%Y%m%d_%H%M%S).log"
 log_message() {
     local message="$(date '+%Y-%m-%d %H:%M:%S') - $1"
     echo "$message" | tee -a "$LOG_FILE"
+
+    logger -t "vm_backup" "$message"
 }
 
 log_message "Starting VM backup process"
@@ -21,12 +23,28 @@ successful_starts=0
 
 backup_run_id="$(date +%Y%m%d_%H%M%S)_$$"
 backup_dir="{{ vm_backup_mount_point }}"
+backup_retention_days="{{ vm_backup_retention_days }}"
+
+cleanup_expired_backups() {
+    if ! [[ "$backup_retention_days" =~ ^[0-9]+$ ]]; then
+        log_message "Invalid VM backup retention period: ${backup_retention_days}"
+        return 1
+    fi
+
+    log_message "Removing VM backup files older than ${backup_retention_days} days"
+    if find "$backup_dir" -maxdepth 1 -type f \( -name '*-vda.qcow2' -o -name '{{ home_assistant_vm_name }}-*.xml' -o -name '{{ reverse_proxy_vm_name }}-*.xml' -o -name '{{ container_manager_vm_name }}-*.xml' \) -mtime +"$backup_retention_days" -print -delete >> "$LOG_FILE" 2>&1; then
+        log_message "Expired VM backup file cleanup completed"
+    else
+        log_message "Failed to remove expired VM backup files"
+        return 1
+    fi
+}
 
 # Start backups and track which ones actually started
 for vm in "${vms[@]}"
 do
     backup_xml="/tmp/${vm}-backup_${backup_run_id}.xml"
-    backup_file="${backup_dir}/${vm}-${backup_run_id}-vda.backup"
+    backup_file="${backup_dir}/${vm}-${backup_run_id}-vda.qcow2"
 
     case "$vm" in
         "{{ home_assistant_vm_name }}")
@@ -44,7 +62,7 @@ do
 
     log_message "Backing up ${vm}"
     if ! cat > "$backup_xml" <<EOF
-<domainbackup>
+<domainbackup mode='push' backupmode='full'>
   <disks>
     <disk name='vda' type='file'>
       <target file='${backup_file}'/>
@@ -59,6 +77,8 @@ EOF
         backup_started["${vm}"]=0
         continue
     fi
+
+    virsh dumpxml -c qemu:///system "$vm" > "${backup_dir}/${vm}-${backup_run_id}.xml"
 
     if virsh -c qemu:///system backup-begin "$vm" "$backup_xml" >> "$LOG_FILE" 2>&1; then
         rm -f "$backup_xml"
@@ -88,7 +108,7 @@ do
             STATUS=$(virsh -c qemu:///system domjobinfo ${vm} 2>> "$LOG_FILE")
 
             if [[ $STATUS == *"None"* ]]; then
-                chown {{ deploy_user_name }}:{{ deploy_user_name }} "${backup_dir}/${vm}-${backup_run_id}-vda.backup" >> "$LOG_FILE" 2>&1
+                chown {{ deploy_user_name }}:{{ deploy_user_name }} "${backup_dir}/${vm}-${backup_run_id}-vda.qcow2" >> "$LOG_FILE" 2>&1
                 backup_completed["${vm}"]=1
                 COUNT=$((COUNT-1))
                 log_message "Backup completed for ${vm}, remaining: ${COUNT}"
@@ -99,6 +119,8 @@ do
         fi
     done
 done
+
+cleanup_expired_backups
 
 # Summary of results
 log_message ""

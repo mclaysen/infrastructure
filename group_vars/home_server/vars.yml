@@ -131,3 +131,8 @@ fileshare_group_name: fileshare_users
 fileshare_group_gid: 3004
 vm_backup_mount_point: /mnt/truenas_shares/vm
 vm_backup_nfs_share: 192.168.86.200:/mnt/philbert/application_backup/vm
+vm_backup_retention_days: 24
+
+#syslog settings
+syslog_forwarder_target: 192.168.86.202
+syslog_forwarder_port: 9514
