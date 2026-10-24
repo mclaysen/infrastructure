@@ -19,6 +19,7 @@ vms=("{{ home_assistant_vm_name }}" "{{ reverse_proxy_vm_name }}" "{{ container_
 # Arrays to track backup status
 declare -A backup_started
 declare -A backup_completed
+declare -A backup_failed
 successful_starts=0
 
 backup_run_id="$(date +%Y%m%d_%H%M%S)_$$"
@@ -62,7 +63,7 @@ do
 
     log_message "Backing up ${vm}"
     if ! cat > "$backup_xml" <<EOF
-<domainbackup mode='push' backupmode='full'>
+<domainbackup mode='push'>
   <disks>
     <disk name='vda' type='file'>
       <target file='${backup_file}'/>
@@ -78,7 +79,7 @@ EOF
         continue
     fi
 
-    virsh dumpxml -c qemu:///system "$vm" > "${backup_dir}/${vm}-${backup_run_id}.xml"
+    virsh -c qemu:///system dumpxml "$vm" > "${backup_dir}/${vm}-${backup_run_id}.xml"
 
     if virsh -c qemu:///system backup-begin "$vm" "$backup_xml" >> "$LOG_FILE" 2>&1; then
         rm -f "$backup_xml"
@@ -108,10 +109,30 @@ do
             STATUS=$(virsh -c qemu:///system domjobinfo ${vm} 2>> "$LOG_FILE")
 
             if [[ $STATUS == *"None"* ]]; then
-                chown {{ deploy_user_name }}:{{ deploy_user_name }} "${backup_dir}/${vm}-${backup_run_id}-vda.qcow2" >> "$LOG_FILE" 2>&1
+                backup_file="${backup_dir}/${vm}-${backup_run_id}-vda.qcow2"
+
+                if ! COMPLETED_STATUS=$(virsh -c qemu:///system domjobinfo "$vm" --completed 2>> "$LOG_FILE"); then
+                    backup_failed["${vm}"]=1
+                    log_message "Unable to retrieve completed backup status for ${vm}; marking backup as failed"
+                elif [[ $COMPLETED_STATUS == *"Job type:"*"Failed"* ]]; then
+                    backup_failed["${vm}"]=1
+                    log_message "Backup failed for ${vm}: ${COMPLETED_STATUS//$'\n'/; }"
+                elif [[ ! -s "$backup_file" ]]; then
+                    backup_failed["${vm}"]=1
+                    log_message "Backup ended for ${vm}, but backup file is missing or empty: ${backup_file}"
+                else
+                    if chown {{ deploy_user_name }}:{{ deploy_user_name }} "$backup_file" >> "$LOG_FILE" 2>&1; then
+                        log_message "Set backup ownership for ${vm}"
+                    else
+                        log_message "Backup completed for ${vm}, but failed to set ownership for ${backup_file}"
+                    fi
+
+                    log_message "Backup completed successfully for ${vm}"
+                fi
+
                 backup_completed["${vm}"]=1
                 COUNT=$((COUNT-1))
-                log_message "Backup completed for ${vm}, remaining: ${COUNT}"
+                log_message "Backup job finished for ${vm}, remaining: ${COUNT}"
             else
                 log_message "Backup still in progress for ${vm}"
                 echo "  Status: ${STATUS}" >> "$LOG_FILE"
@@ -129,7 +150,9 @@ completed_count=0
 for vm in "${vms[@]}"
 do
     if [[ ${backup_started["${vm}"]} -eq 1 ]]; then
-        if [[ ${backup_completed["${vm}"]} -eq 1 ]]; then
+        if [[ ${backup_failed["${vm}"]} -eq 1 ]]; then
+            log_message " ${vm}: Failed"
+        elif [[ ${backup_completed["${vm}"]} -eq 1 ]]; then
             log_message " ${vm}: Successfully completed"
             completed_count=$((completed_count + 1))
         else
