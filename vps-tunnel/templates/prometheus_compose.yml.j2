@@ -1,7 +1,7 @@
 services:
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:latest
+    image: prom/prometheus:{{ prometheus_version }}
     restart: unless-stopped
     ports:
       - 127.0.0.1:9090:9090

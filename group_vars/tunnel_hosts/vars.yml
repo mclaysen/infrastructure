@@ -12,6 +12,9 @@ loki_version: 3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db6
 alloy_version: v1.21.2@sha256:89a5a320168387336b9ac3c850609c3ba7757eadd4ae5f1d819deb35e9854b18
 crowdsec_plugin_version: v1.8.1
 crowdsec_container_version: v1.8.1@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
+max_mind_geoipupdate_version: v8.0.0@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
+prometheus_version: v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+grafana_version: 13.2.4@sha256:dbbc38ea21103cefb50396340cd88afec779c7e070b0a7bf5a75b4ce46651d3f
 
 deploy_user_name: deployUser
 deployuser_ssh_public_key_path: ~/.ssh/rack_nerd_vps1.pub
