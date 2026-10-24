@@ -96,6 +96,16 @@ loki.process "syslog_router" {
       }
     }
   }
+  stage.match {
+    selector = "{message_app_name = \"vm_backup\"}"
+
+    stage.static_labels {
+      values= {
+        service_name = "home-server.vm-backup",
+        container = "syslog",
+      }
+    }
+  }
 
   forward_to = [loki.write.default.receiver]
   // Drop any unwanted logs if necessary.
