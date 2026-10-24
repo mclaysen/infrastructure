@@ -8,6 +8,7 @@ if $programname == "vm_backup" then {
         target="{{ syslog_forwarder_target }}"
         port="{{ syslog_forwarder_port }}"
         protocol="udp"
+        template="RSYSLOG_SyslogProtocol23Format"
     )
     stop
 }
