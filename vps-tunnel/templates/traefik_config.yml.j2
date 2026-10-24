@@ -84,7 +84,7 @@ experimental:
     crowdsec:
       # CrowdSec plugin is enabled here so the matching file provider config can attach middleware.
       moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
-      version: v1.4.4
+      version: {{ crowdsec_plugin_version }}
   otlpLogs: true
 log:
   compress: true

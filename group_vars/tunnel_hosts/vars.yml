@@ -4,12 +4,14 @@ timezone: America/New_York
 domain: mclaysen.com
 email_address: me@mclaysen.com
 
-pangolin_version: ee-1.21.1
-traefik_version: 3.7.10
-gerbil_version: 1.4.3
-badger_version: v1.5.0
-loki_version: 3.7.6
-alloy_version: v1.18.1
+pangolin_version: ee-1.25.3@sha256:f2c0fc54e1b59efcd23b8685e8df84350f363e14ebe1c13ce88a681f181ca49e
+traefik_version: 3.7.16@sha256:c8a121e4bb1347e8fd52657fab12f2cb70b68f8a018895e2068f92c9e519b9c2
+gerbil_version: 1.5.2@sha256:1f6e64eaba7997282c7067ba19922fc7e46b5f73e1a27add3dd66a591d50512f
+badger_version: v1.7.0
+loki_version: 3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+alloy_version: v1.21.2@sha256:89a5a320168387336b9ac3c850609c3ba7757eadd4ae5f1d819deb35e9854b18
+crowdsec_plugin_version: v1.8.1
+crowdsec_container_version: v1.8.1@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
 
 deploy_user_name: deployUser
 deployuser_ssh_public_key_path: ~/.ssh/rack_nerd_vps1.pub
