@@ -52,5 +52,12 @@
         modules_load_vfio.changed or
         (iommu_kernel_args is defined and iommu_kernel_args.changed)
       }}
-  
+
+- name: Configure syslog forwarder
+  ansible.builtin.template:
+    src: home-server/templates/syslog_forwarder.conf.j2
+    dest: /etc/rsyslog.d/forwarder.conf
+    mode: "0644"
+  notify:
+    - Restart rsyslog
 

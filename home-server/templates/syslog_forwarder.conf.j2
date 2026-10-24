@@ -1,0 +1,13 @@
+if $programname == "vm_backup" then {
+    action(
+        type="omfwd"
+        queue.type="linkedlist"
+        queue.filename="syslog_forward"
+        action.resumeRetryCount="-1"
+        queue.saveOnShutdown="on"
+        target="{{ syslog_forwarder_target }}"
+        port="{{ syslog_forwarder_port }}"
+        protocol="udp"
+    )
+    stop
+}
