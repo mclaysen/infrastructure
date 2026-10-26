@@ -58,6 +58,14 @@
     state: mounted
     opts: rw
 
+- name: Create VM backup current and archive directories
+  ansible.builtin.file:
+    path: "{{ vm_backup_mount_point }}/{{ item }}"
+    state: directory
+  loop:
+    - current
+    - archive
+
 - name: Allow libvirt to access NFS shares
   ansible.posix.seboolean:
     name: virt_use_nfs

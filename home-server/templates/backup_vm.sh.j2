@@ -23,8 +23,27 @@ declare -A backup_failed
 successful_starts=0
 
 backup_run_id="$(date +%Y%m%d_%H%M%S)_$$"
-backup_dir="{{ vm_backup_mount_point }}"
+backup_root="{{ vm_backup_mount_point }}"
+backup_dir="${backup_root}/current"
+backup_archive_dir="${backup_root}/archive"
 backup_retention_days="{{ vm_backup_retention_days }}"
+
+rotate_current_backup() {
+    if [[ -d "$backup_dir" ]] && [[ -n "$(find "$backup_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+        archived_backup_dir="${backup_archive_dir}/${backup_run_id}"
+
+        log_message "Archiving the previous VM backup set to ${archived_backup_dir}"
+        if ! mv "$backup_dir" "$archived_backup_dir"; then
+            log_message "Failed to archive the previous VM backup set"
+            return 1
+        fi
+    fi
+
+    if ! mkdir -p "$backup_dir"; then
+        log_message "Failed to create current VM backup directory: ${backup_dir}"
+        return 1
+    fi
+}
 
 cleanup_expired_backups() {
     if ! [[ "$backup_retention_days" =~ ^[0-9]+$ ]]; then
@@ -32,14 +51,23 @@ cleanup_expired_backups() {
         return 1
     fi
 
-    log_message "Removing VM backup files older than ${backup_retention_days} days"
-    if find "$backup_dir" -maxdepth 1 -type f \( -name '*-vda.qcow2' -o -name '{{ home_assistant_vm_name }}-*.xml' -o -name '{{ reverse_proxy_vm_name }}-*.xml' -o -name '{{ container_manager_vm_name }}-*.xml' \) -mtime +"$backup_retention_days" -print -delete >> "$LOG_FILE" 2>&1; then
-        log_message "Expired VM backup file cleanup completed"
+    log_message "Removing archived VM backup sets older than ${backup_retention_days} days"
+    if find "$backup_archive_dir" -mindepth 1 -maxdepth 1 -type d -mtime +"$backup_retention_days" -print -exec rm -rf -- {} + >> "$LOG_FILE" 2>&1; then
+        log_message "Expired VM backup set cleanup completed"
     else
-        log_message "Failed to remove expired VM backup files"
+        log_message "Failed to remove expired VM backup sets"
         return 1
     fi
 }
+
+if ! mkdir -p "$backup_archive_dir"; then
+    log_message "Failed to create VM backup archive directory: ${backup_archive_dir}"
+    exit 1
+fi
+
+if ! rotate_current_backup; then
+    exit 1
+fi
 
 # Start backups and track which ones actually started
 for vm in "${vms[@]}"
@@ -121,12 +149,6 @@ do
                     backup_failed["${vm}"]=1
                     log_message "Backup ended for ${vm}, but backup file is missing or empty: ${backup_file}"
                 else
-                    if chown {{ deploy_user_name }}:{{ deploy_user_name }} "$backup_file" >> "$LOG_FILE" 2>&1; then
-                        log_message "Set backup ownership for ${vm}"
-                    else
-                        log_message "Backup completed for ${vm}, but failed to set ownership for ${backup_file}"
-                    fi
-
                     log_message "Backup completed successfully for ${vm}"
                 fi
 
