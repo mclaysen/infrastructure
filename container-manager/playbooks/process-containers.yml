@@ -1,0 +1,37 @@
+---
+- name: Prepare containers for docker
+  hosts: container_manager
+  become: true
+  handlers:
+    - ansible.builtin.import_tasks: ../handlers/main.yml
+  vars_files:
+    - ../../group_vars/portainer_managers/vars.yml
+    - ../../group_vars/portainer_managers/vault.yml
+  tasks:
+    - name: Create directory for container files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        recurse: true
+      loop:
+        - /opt/compose
+        - /opt/compose/mclaysen_website
+
+    - name: Create mclaysen_website compose file
+      ansible.builtin.template:
+        src: ../stacks/mclaysen_website.yml.j2
+        dest: /opt/compose/mclaysen_website/compose.yml
+        mode: '0644'
+
+    - name: Create mclaysen_website environment file
+      ansible.builtin.template:
+        src: ../stacks/mclaysen_website.env.j2
+        dest: /opt/compose/mclaysen_website/.env
+        mode: '0644'
+    
+    - name: Deploy mclaysen_website container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/mclaysen_website
+        remove_orphans: true
+        project_name: mclaysen_website
