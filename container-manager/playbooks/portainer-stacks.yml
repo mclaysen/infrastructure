@@ -31,12 +31,7 @@
         - "{{ loki_config_path | ansible.builtin.dirname }}"
         - "{{ blackbox_exporter_config_path | ansible.builtin.dirname }}"
 
-    - name: Create smarthome config directory
-      ansible.builtin.file:
-        path: "{{ homebridge_config_dir }}"
-        state: directory
-        mode: '0755'
-        recurse: true
+ 
 
     - name: Create directories for ghost content and MySQL data
       ansible.builtin.file:
@@ -114,22 +109,8 @@
     portainer_token: "{{ portainer_api_token }}"
     rendered_dir: /tmp/portainer-stacks
     stacks:
-      - name: smarthome
-        template: ../stacks/smarthome.yml.j2
-        stack_type: standalone
-        endpoint_id: "{{ endpoint_id }}"
-        env: []
-        prune: true
-        pull_images: true
       - name: monitoring_stack
         template: ../stacks/monitoring_stack.yml.j2
-        stack_type: standalone
-        endpoint_id: "{{ endpoint_id }}"
-        env: []
-        prune: true
-        pull_images: true
-      - name: jellyfin
-        template: ../stacks/jellyfin.yml.j2
         stack_type: standalone
         endpoint_id: "{{ endpoint_id }}"
         env: []
@@ -144,20 +125,6 @@
         pull_images: true
       - name: newt
         template: ../stacks/newt.yml.j2
-        stack_type: standalone
-        endpoint_id: "{{ endpoint_id }}"
-        env: []
-        prune: true
-        pull_images: true
-      - name: cloudflared
-        template: ../stacks/cloudflared.yml.j2
-        stack_type: standalone
-        endpoint_id: "{{ endpoint_id }}"
-        env: []
-        prune: true
-        pull_images: true
-      - name: mclaysen_website
-        template: ../stacks/mclaysen_website.yml.j2
         stack_type: standalone
         endpoint_id: "{{ endpoint_id }}"
         env: []
