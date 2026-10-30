@@ -2,7 +2,7 @@ services:
   server:
     image: ghcr.io/mclaysen/mclaysen-website:latest
     environment:
-      NODE_ENV: {NODE_ENV:?NODE_ENV must be set}
+      NODE_ENV: ${NODE_ENV:?NODE_ENV must be set}
     ports:
       - 5001:3000
     restart: unless-stopped
