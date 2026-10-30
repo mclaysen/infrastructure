@@ -13,25 +13,115 @@
         path: "{{ item }}"
         state: directory
         mode: '0755'
-        recurse: true
       loop:
         - /opt/compose
         - /opt/compose/mclaysen_website
+        - /opt/compose/cloudflared
+        - /opt/compose/smarthome
+        - /opt/compose/jellyfin
 
     - name: Create mclaysen_website compose file
       ansible.builtin.template:
-        src: ../stacks/mclaysen_website.yml.j2
-        dest: /opt/compose/mclaysen_website/compose.yml
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
         mode: '0644'
+      loop:
+        - {src: ../stacks/mclaysen_website.yml.j2, dest: /opt/compose/mclaysen_website/compose.yml }
+        - {src: ../stacks/cloudflared.yml.j2, dest: /opt/compose/cloudflared/compose.yml }
+        - {src: ../stacks/smarthome.yml.j2, dest: /opt/compose/smarthome/compose.yml }
+        - {src: ../stacks/jellyfin.yml.j2, dest: /opt/compose/jellyfin/compose.yml }
 
     - name: Create mclaysen_website environment file
       ansible.builtin.template:
-        src: ../stacks/mclaysen_website.env.j2
-        dest: /opt/compose/mclaysen_website/.env
-        mode: '0644'
-    
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: '0600'
+        owner: root
+        group: root
+      no_log: true
+      loop:
+        - {src: ../stacks/mclaysen_website.env.j2, dest: /opt/compose/mclaysen_website/.env }
+        - {src: ../stacks/cloudflared.env.j2, dest: /opt/compose/cloudflared/.env }
+        - {src: ../stacks/smarthome.env.j2, dest: /opt/compose/smarthome/.env }
+        - {src: ../stacks/jellyfin.env.j2, dest: /opt/compose/jellyfin/.env }
+
+    - name: Create smarthome config directory
+      ansible.builtin.file:
+        path: "{{ homebridge_config_dir }}"
+        state: directory
+        mode: '0755'
+
     - name: Deploy mclaysen_website container
       community.docker.docker_compose_v2:
         project_src: /opt/compose/mclaysen_website
         remove_orphans: true
         project_name: mclaysen_website
+
+    - name: Deploy cloudflared container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/cloudflared
+        remove_orphans: true
+        project_name: cloudflared
+
+    - name: Deploy smarthome container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/smarthome
+        remove_orphans: true
+        project_name: smarthome
+
+    - name: Create pangolin network
+      community.docker.docker_network:
+        name: pangolin_network
+        state: present
+
+    - name: Ensure Jellyfin volumes exist
+      community.docker.docker_volume:
+        name: "{{ item }}"
+        state: present
+        recreate: never
+      loop:
+        - jellyfin_jellyfin-config
+        - jellyfin_jellyfin-cache
+
+    - name: Inspect Jellyfin media mounts
+      ansible.builtin.command:
+        argv:
+          - findmnt
+          - --noheadings
+          - --raw
+          - --mountpoint
+          - "{{ item.path }}"
+          - --output
+          - SOURCE,FSTYPE
+      loop:
+        - path: "{{ home_videos_mount_point }}"
+          src: "{{ home_videos_nfs_share }}"
+        - path: "{{ movies_mount_point }}"
+          src: "{{ movies_nfs_share }}"
+      register: jellyfin_mounts
+      changed_when: false
+      failed_when: false
+      when: start_containers | default(false) | bool
+      check_mode: false
+
+    - name: Require the expected Jellyfin NFS mounts
+      ansible.builtin.assert:
+        that:
+          - >-
+            item.rc == 0 and
+            (item.stdout | trim) in
+            [item.item.src ~ ' nfs', item.item.src ~ ' nfs4']
+        fail_msg: >-
+          {{ item.item.path }} is not mounted from {{ item.item.src }} as NFS.
+          Mount the share before deploying Jellyfin.
+      loop: "{{ jellyfin_mounts.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+      when: start_containers | default(false) | bool
+
+    - name: Deploy jellyfin container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/jellyfin
+        remove_orphans: true
+        project_name: jellyfin
+      when: start_containers | default(false) | bool
