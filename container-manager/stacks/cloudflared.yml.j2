@@ -26,7 +26,7 @@ services:
 
     # Environment variables for Cloudflare Tunnel
     environment:
-      - "TUNNEL_TOKEN={{ cloudflare_tunnel_token }}"     # Pass the Cloudflare Tunnel token from environment variable
+      - "TUNNEL_TOKEN=${TUNNEL_TOKEN:?TUNNEL_TOKEN must be set}"     # Pass the Cloudflare Tunnel token from environment variable
 
     # Health check configuration to verify Cloudflare Tunnel readiness
     healthcheck:
