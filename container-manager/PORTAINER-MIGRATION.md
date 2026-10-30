@@ -9,10 +9,38 @@ the Portainer agent, and all other stacks running and managed as they are.
 The website's current definition is
 [`stacks/mclaysen_website.yml.j2`](stacks/mclaysen_website.yml.j2). It
 declares one `server` service, the
-`ghcr.io/mclaysen/mclaysen-website:latest` image, `NODE_ENV=production`,
-port mapping `5001:3000`, and `restart: unless-stopped`. It declares no
-volumes or external networks. The reverse proxy is configured to forward
-`mclaysen.com` to `192.168.86.202:5001`.
+`ghcr.io/mclaysen/mclaysen-website:latest` image, a required `NODE_ENV`
+variable, port mapping `5001:3000`, and `restart: unless-stopped`.
+[`stacks/mclaysen_website.env.j2`](stacks/mclaysen_website.env.j2) sets
+`NODE_ENV=production`. The stack declares no volumes or external networks. The
+reverse proxy is configured to forward `mclaysen.com` to `192.168.86.202:5001`.
+
+## Current migration status
+
+- The working tree contains a native deployment playbook,
+  [`playbooks/process-containers.yml`](playbooks/process-containers.yml), and
+  removes the website from the Portainer stack list. These changes have not
+  been verified on the host.
+- The native playbook deploys the website unconditionally and deploys
+  Cloudflare only when `start_containers=true`. It is not imported by the
+  normal `container-manager.yml` run, so a regular run will not deploy website
+  updates. The preferred ongoing approach is one combined playbook that
+  reconciles migrated stacks; document how it will be run.
+- Local `docker compose config` validation succeeded with the environment
+  template and failed as intended without `NODE_ENV`. The user confirmed the
+  host-side Compose file matches the website template and `.env` contains
+  `NODE_ENV=production`; the preparation run skipped the deployment task.
+  The user later stopped the Portainer stack, observed an HTTP 500, and ran
+  the playbook; the site subsequently responded locally and returned HTTP 200
+  over HTTPS from an external client. Container labels confirm that the running
+  project uses `/opt/compose/mclaysen_website/compose.yml`. The user reports
+  that a subsequent native playbook deployment did not restart the container.
+  After rerunning the full Portainer playbook, the container still reported the
+  native Compose file and working directory. The remaining post-cutover checks
+  have not yet been confirmed.
+- The native playbook now specifies `root:root` ownership and `0600` mode for
+  `.env`, even though the website file contains no secrets. The host's
+  permissions have not yet been verified after this change.
 
 The reported running container is `mclaysen_website-server-1` on
 `mclaysen_website_default`. Verify these names and the Compose labels before
@@ -20,6 +48,9 @@ cutover; do not assume the names alone prove the project identity.
 
 Portainer references for the current endpoint:
 
+- [Website stack](https://container-manager.mclaysen.com/#!/3/docker/stacks/mclaysen_website?id=6&type=2&regular=true&orphaned=false&orphanedRunning=false):
+  stack ID `6`, created 2026-05-25 15:28:03 and last updated
+  2026-10-24 11:20:02 by `admin`, as reported by Portainer.
 - [Containers](https://container-manager.mclaysen.com/#!/3/docker/containers):
   select `mclaysen_website-server-1`.
 - [Website network](https://container-manager.mclaysen.com/#!/3/docker/networks/mclaysen_website_default):
@@ -29,6 +60,8 @@ The container inspection reported on 2026-10-28 confirms:
 
 | Property | Observed value |
 | --- | --- |
+| Container ID | `3bc952a922d25f9e003befac60a1903043a3398fa24772f668890a801530a404` |
+| Created / started | `2026-10-24 11:21:42` / `2026-10-24 11:21:44` (Portainer display) |
 | Compose project | `mclaysen_website` |
 | Compose service | `server` |
 | Image ID | `sha256:98a64b7858ad4a7d440070f5fdca2f0d6acda360d80a73098b74de60973ee5f4` |
@@ -167,36 +200,53 @@ Portainer's files directly.
 
 ## 2. Build and validate the native deployment
 
-- [ ] Add an Ansible playbook that renders only the website template to a
-  stable host path, such as `/opt/compose/mclaysen_website/compose.yml`, and
-  deploys it using `community.docker.docker_compose_v2`.
-- [ ] Render `/opt/compose/mclaysen_website/.env` separately, initially with
-  `NODE_ENV=production`. Configure the native Compose service to explicitly
-  pass `NODE_ENV: ${NODE_ENV:?NODE_ENV must be set}` to the container. Compose
-  uses `.env` for interpolation; it does not automatically pass every entry
-  into the container.
-- [ ] Preserve the current Portainer deployment until cutover. If the existing
-  shared template is changed to require `NODE_ENV`, provide it to Portainer too,
-  or use a separate native template until the website is removed from the
-  Portainer deployment path.
-- [ ] Keep rendered environment files on the Docker host with restricted
-  permissions. For future secret-bearing stacks, render Vault-backed values
-  with `no_log: true`, avoid logging resolved configuration, and remember that
-  the resulting host files contain plaintext secrets.
-- [ ] Explicitly set the Compose project name to the verified existing project
-  name, expected to be `mclaysen_website`, regardless of the directory name.
+- [x] Add an Ansible playbook that prepares the website Compose file at
+  `/opt/compose/mclaysen_website/compose.yml` and can deploy it using
+  `community.docker.docker_compose_v2`.
+- [x] Add a separate `.env` template with `NODE_ENV=production` and configure
+  Compose to pass `NODE_ENV: ${NODE_ENV:?NODE_ENV must be set}` to the
+  container. Compose uses `.env` for interpolation; it does not automatically
+  pass every entry into the container.
+- [x] Confirm both host-side files are complete: the Compose file matches the
+  template, including `restart: unless-stopped`, and `.env` contains
+  `NODE_ENV=production`.
+- [x] Confirm the preparation run skipped the native website deployment task.
+- [x] Confirm the running website container was not recreated during
+  preparation: its reported ID and start time match the earlier inspection.
+- [ ] Preserve a working Portainer rollback path. The current working tree
+  removes the website from its Portainer stack list; re-enabling that entry
+  with the changed template also requires supplying `NODE_ENV`.
+- [x] Configure the website `.env` template task with `root:root` ownership,
+  mode `0600`, and `no_log: true`. Use the same ownership and mode for all
+  rendered stack `.env` files, whether or not they contain secrets.
+- [ ] Run the updated preparation playbook and verify the host file's ownership
+  and permissions without displaying its contents:
+
+  ```bash
+  sudo stat -c '%U:%G %a %n' /opt/compose/mclaysen_website/.env
+  ```
+
+  Expected: `root:root 600 /opt/compose/mclaysen_website/.env`.
+- [ ] For secret-bearing stacks, render Vault-backed values with
+  `no_log: true` and avoid logging resolved configuration. The rendered host
+  files still contain plaintext secrets.
+- [x] Explicitly set the Compose project name to the verified existing project
+  name, `mclaysen_website`, regardless of the directory name.
 - [ ] Preserve the current service, port, network identity, environment,
   restart policy, and image behavior. Do not introduce a pull of a newer
   `latest` image during cutover unless explicitly intended. Record the current
   image so rollback can use the same release.
-- [ ] Separate preparation from activation so rendering and validation cannot
-  replace the live Portainer-managed container. Ansible check mode alone does
-  not create the rendered file or prove it is valid.
+- [x] Use a combined native playbook that reconciles migrated stacks. The
+  website deploys on each run; Compose may recreate it if its configuration
+  or image changes. Ansible check mode alone does not create rendered files or
+  prove they are valid.
+- [x] Validate the source Compose and environment templates locally: they
+  resolve `NODE_ENV` to `production` and fail when it is missing.
 - [ ] On the host, validate the staged Compose configuration with the intended
   project name:
 
   ```bash
-  docker compose -p mclaysen_website \
+  sudo docker compose -p mclaysen_website \
     -f /opt/compose/mclaysen_website/compose.yml config
   ```
 
@@ -205,11 +255,15 @@ Portainer's files directly.
   environment variables or other configuration missing from the template, and
   that `NODE_ENV` resolves to `production`. Check that the inherited shell
   environment does not override the intended `.env` values.
-- [ ] Prevent the existing Portainer deployment automation from managing this
-  stack after cutover, while leaving its entry and the other stacks available
-  for rollback. Account for the imported
-  [`portainer-stacks.yml`](playbooks/portainer-stacks.yml) in
-  [`container-manager.yml`](../container-manager.yml).
+- [x] Remove the website entry from the Portainer deployment list in the
+  working tree; leave the other stack entries intact.
+- [x] Rerun the Portainer playbook and confirm the running website still reports
+  the native Compose file and working directory.
+- [ ] Confirm the existing Portainer stack record remains available for rollback.
+- [ ] Choose and document how native website updates will be deployed after
+  cutover. The native playbook is not currently imported by
+  [`container-manager.yml`](../container-manager.yml), and its deployment task
+  is disabled by default.
 - [ ] Document and test the rollback sequence before cutover, including how to
   re-enable the old deployment path and which image to use.
 
@@ -217,19 +271,25 @@ Portainer's files directly.
 
 - [ ] Confirm the native configuration is validated and the Portainer
   automation will not redeploy the website.
-- [ ] Stop only the website stack in Portainer. Do not delete the stack
-  definition, remove volumes, or change any other stack.
-- [ ] Start the native Compose project with the verified project name. Check
-  for port or container-name conflicts before proceeding.
+- [x] Stop the website stack in Portainer. The user observed an HTTP 500 after
+  stopping it.
+- [x] Confirm the running container uses the native Compose project. Inspection
+  reports project `mclaysen_website`, config
+  `/opt/compose/mclaysen_website/compose.yml`, and working directory
+  `/opt/compose/mclaysen_website`.
 - [ ] Verify the expected container is running, attached to the expected
   network, and using the expected image ID. Inspect its logs for errors.
-- [ ] Check local HTTP on port `5001` and the public
-  `https://mclaysen.com/` response against the baseline. Verify representative
-  website content, not just container status.
-- [ ] Run the native deployment again and confirm it converges without
-  unnecessary recreation. Verify that a normal
-  [`container-manager.yml`](../container-manager.yml) run does not take
-  ownership back through Portainer.
+- [x] Check local HTTP on port `5001` and the public
+  `https://mclaysen.com/` response against the baseline. The local response
+  contained website HTML, and the external HTTPS check returned HTTP 200; HTTP
+  redirected to HTTPS with status 307.
+- [ ] Verify representative website content and functionality through the
+  public URL, not just the HTTP status.
+- [x] Run the native deployment again and confirm it does not unnecessarily
+  restart or recreate the website container.
+- [ ] Verify that a normal full [`container-manager.yml`](../container-manager.yml)
+  run does not take ownership back through Portainer; the Portainer playbook
+  itself has been rerun successfully.
 - [ ] Observe the website for an agreed period and, when practical, confirm
   recovery after a host or Docker restart.
 
@@ -243,15 +303,504 @@ Portainer's files directly.
 
 ## 5. Retire the website's Portainer ownership
 
-- [ ] After the observation period, remove the website entry from the Portainer
-  deployment automation and keep the native playbook as its sole deployment
-  owner.
+- [ ] After the observation period, confirm the website entry remains absent
+  from Portainer deployment automation and the native playbook is its sole
+  deployment owner.
 - [ ] Determine a safe way to retire the Portainer stack record for the
   installed Portainer version. Deleting a stack may stop or remove its live
   Compose resources, even when native Compose now manages the same project.
   Do not delete it until the behavior and recovery plan are verified; retaining
   an unused record is safer than interrupting the website.
 - [ ] Confirm the rest of the Portainer-managed stacks remain unchanged.
+
+## Next migration: Cloudflare Tunnel
+
+Migrate only the `cloudflared` stack from Portainer to native Compose. Keep
+Portainer and all other stacks, including the native website, unchanged.
+The [current template](stacks/cloudflared.yml.j2) defines one
+`cloudflare-tunnel` container and no declared volumes. The original
+Portainer template rendered the tunnel token directly into the Compose file;
+the working-tree changes move it toward a separate `.env`. The reported running image was
+`cloudflare/cloudflared:2026.8.1`, and the reported Compose project and network
+were `cloudflared` and `cloudflared_default`. Recheck the live state before
+cutover. The user identified [router.mclaysen.com](https://router.mclaysen.com/)
+as an example of a site dependent on this tunnel.
+
+### 1. Inventory and prepare
+
+- [ ] Identify the tunnel, its routed hostnames and services, any other
+  connectors, and the expected impact of a connector restart. Record baseline
+  connector status in Cloudflare and externally test representative routes,
+  including `https://router.mclaysen.com/`. Choose a maintenance window and
+  rollback decision point.
+- [ ] Record the running container's project and service labels, image ID,
+  repository digest if available, start time, network membership, mounts,
+  restart policy, logging configuration, and health status. Confirm these
+  match the template and current Portainer stack definition.
+- [ ] Save the current Portainer stack definition and deployment settings for
+  rollback. The rendered Compose file contains a tunnel token: treat any saved
+  copy as a secret, restrict access, and do not paste it into logs or chat.
+- [ ] Confirm the token's Vault source and current image version. Avoid
+  displaying the token in command output, the process command line, or a
+  public repository.
+- [ ] Document how the combined native playbook will deploy website and
+  Cloudflare updates routinely after cutover, without relying on Portainer.
+  A run reconciles migrated stacks and can apply pending changes to them.
+
+### 2. Prepare native Compose
+
+- [x] Add a Cloudflare project to the native deployment playbook at
+  `/opt/compose/cloudflared`, explicitly setting the project name to
+  `cloudflared`. Host-side deployment remains unverified.
+- [x] Configure the environment-file template task for `root:root`, `0600`,
+  and `no_log: true`. The user confirmed the host file is `root:root 600`.
+- [x] Correct Cloudflare Compose interpolation to use `:?` and validate locally
+  with a dummy token; the configuration fails when the token is missing.
+- [x] Confirm the host-side Compose file matches the intended template. The
+  user showed `/opt/compose/cloudflared/compose.yml` with image
+  `cloudflare/cloudflared:2026.8.1`, the corrected `:?` interpolation, and the
+  health-check `start_period: 10s`.
+- [ ] Confirm the actual token passes to the container without exposing it.
+- [ ] Confirm the environment template uses the Vault variable containing the
+  existing tunnel token. It currently references `cloudflared_tunnel_token`;
+  the original Portainer template referenced `cloudflare_tunnel_token`.
+  Account for Compose `.env` escaping and shell-variable precedence without
+  exposing the token. The user confirmed that a token value is present in the
+  host `.env`; its identity and effective value have not yet been verified.
+- [ ] Preserve the verified service and container names, hostname, pinned image
+  version, command, restart policy, network, logging options, and health-check
+  settings. Do not pull a different image during cutover unless intended.
+- [ ] Document the combined playbook's behavior: the website currently deploys
+  on every run, while `start_containers` gates Cloudflare. Rendering both
+  stacks together also makes website deployment dependent on the Cloudflare
+  environment template. For future migrations, keep the new stack's activation
+  gated until cutover. Directory creation no longer recursively changes
+  `/opt/compose` permissions.
+- [x] Remove Cloudflare from the Portainer deployment list in the working tree,
+  so that playbook no longer deploys the modified shared template.
+- [ ] Preserve a working Portainer rollback path: restoring its stack entry
+  with the modified template requires a compatible token configuration.
+- [x] Verify the host `.env` file is `root:root 600` without displaying its
+  contents:
+
+  ```bash
+  sudo stat -c '%U:%G %a %n' /opt/compose/cloudflared/.env
+  ```
+
+- [ ] Validate the staged host configuration with the intended project name
+  and environment file without printing resolved secrets:
+
+  ```bash
+  sudo docker compose -p cloudflared \
+    -f /opt/compose/cloudflared/compose.yml config --quiet
+  ```
+
+  Do not share full `docker compose config` or container inspection output:
+  it can contain the token.
+- [ ] Compare the non-secret native settings with the live container and saved
+  Portainer definition. Verify the token is passed correctly without exposing
+  its value. Record and test the rollback procedure before cutover.
+
+### 3. Cut over and verify
+
+- **Current status:** The user stopped the Portainer Cloudflare stack and
+  observed Cloudflare error 1033 at `router.mclaysen.com`. The subsequent
+  Ansible run reported the native Cloudflare deployment task as changed and
+  completed without failure. The user reports that the sites are reachable
+  again. Container labels confirm project `cloudflared` uses
+  `/opt/compose/cloudflared/compose.yml` and working directory
+  `/opt/compose/cloudflared`; those labels remained unchanged after the user
+  reran the Portainer playbook, and the user reports the site is responding.
+  Connector status in Cloudflare remains unconfirmed.
+- [ ] Verify the working-tree removal of `cloudflared` from Portainer
+  automation is in effect at cutover, while retaining the Portainer stack
+  record and a working rollback configuration. Ensure no other stack's
+  deployment path changes.
+- [x] Stop the Portainer-managed Cloudflare stack; error 1033 was observed
+  afterward on `router.mclaysen.com`.
+- [x] Activate the native project: the Ansible Cloudflare deployment task
+  reported `changed` with no failures.
+- [x] Confirm sites are reachable again after native deployment.
+- [x] Confirm Compose labels point to project `cloudflared`, config
+  `/opt/compose/cloudflared/compose.yml`, and working directory
+  `/opt/compose/cloudflared`.
+- [x] Rerun the Portainer playbook and confirm the Cloudflare container still
+  reports the native Compose file and working directory.
+- [ ] Confirm the running container is attached to the expected network and
+  uses the intended image. Inspect logs carefully without exposing credentials.
+- [ ] Confirm the connector is connected in Cloudflare and check representative
+  routed services, including `https://router.mclaysen.com/`, against the
+  baseline. The user reports that sites are reachable again. The existing
+  `cloudflared --version` health check does **not** prove the tunnel is
+  connected.
+- [ ] Rerun the native deployment and confirm it converges without unnecessary
+  recreation. Confirm the website remains healthy.
+- [ ] Observe the tunnel for an agreed period and verify recovery after a
+  planned host or Docker restart when practical.
+
+### 4. Rollback and cleanup
+
+- [ ] If verification fails, stop the native Cloudflare project, restore the
+  saved Portainer definition, token configuration, image and automation, then
+  redeploy through Portainer. Verify connector status and external routes.
+- [ ] Keep the Portainer stack record during the observation period. Before
+  removing it, verify whether the installed Portainer version can remove only
+  the record without undeploying resources; do not assume normal stack removal
+  is safe for the native project.
+- [ ] Confirm all other stacks and routes remain unchanged. Preserve protected
+  rollback materials only as long as needed.
+
+## Next migration: Homebridge
+
+Migrate the `smarthome` Homebridge stack to the combined native Compose
+playbook. The [current template](stacks/smarthome.yml.j2) defines one
+`homebridge` service with host networking, `restart: always`, and a bind mount
+for persistent configuration. The configured image is
+`homebridge/homebridge:2026-06-24`; the configuration path is defined by
+`homebridge_config_dir` in
+[`vars.yml`](../group_vars/portainer_managers/vars.yml). The reported running
+container was `smarthome-homebridge-1`. Verify the live settings before
+cutover.
+
+The user's container inspection on 2026-10-29 reported project `smarthome`,
+service `homebridge`, container `smarthome-homebridge-1`, and Portainer config
+path `/data/compose/7/docker-compose.yml`. It was running
+`homebridge/homebridge:2026-06-24`, image ID
+`sha256:4a3964f08b837ac2beab1ce99d7d22d4320d1280c5381242628c88c2a61f0e45`,
+started `2026-10-30T02:03:50.21553484Z`, with no Docker health check.
+The reported repository digest is
+`homebridge/homebridge@sha256:4a3964f08b837ac2beab1ce99d7d22d4320d1280c5381242628c88c2a61f0e45`.
+The container uses host networking, `restart: always`, and `json-file` logging
+with `max-size=10mb` and `max-file=1`. Its writable bind mount is
+`/home/ansible/docker/smarthome/homebridge:/homebridge`.
+The reported host directory is owned by `root:root` with mode `0755`, and its
+top-level files were also shown as `root:root` and mode `0755`. Some may contain
+credentials or pairing information; avoid publishing their contents and review
+access separately without changing permissions blindly during migration.
+
+### 1. Inventory, backup, and baseline
+
+- [ ] Choose a maintenance window and identify smart-home integrations that
+  will be interrupted. Record how to test the Homebridge UI and at least one
+  representative accessory or integration before and after the migration.
+- [x] Record the live container's Compose project and service labels, image
+  ID, start time, status, and health status; confirm the expected project,
+  service, and container names.
+- [x] Record the available repository digest, network mode, mounts, restart
+  policy, and logging settings.
+- [x] Resolve the actual host path mounted at `/homebridge` and verify it
+  matches the configured `homebridge_config_dir`. Record its ownership and
+  permissions. Do not paste configuration, credentials, or pairing data into
+  chat or logs.
+- [x] Confirm the user's backup readiness for cutover. The user reports that
+  the full container-manager VM is backed up and is comfortable proceeding;
+  Homebridge directory coverage and restorability were not independently
+  verified.
+- [ ] Save the current Portainer stack definition and deployment settings for
+  rollback, including the image version and actual mount path.
+
+### 2. Prepare native Compose
+
+- [x] Add Homebridge Compose and environment-file preparation to the combined
+  playbook under `/opt/compose/smarthome`.
+- [x] Add a gated `community.docker.docker_compose_v2` deployment task with the
+  explicit project name `smarthome`.
+- [x] Add a separate, initially empty `.env` template and configure its
+  rendering as `root:root` / `0600`. Pass any future container values
+  explicitly; Compose interpolation alone does not place `.env` values in the
+  container.
+- [x] Verify the rendered host `.env` file is empty and owned by `root:root`
+  with mode `0600`.
+- [x] Inspect the host Compose file and confirm the image, host networking,
+  bind mount, restart policy, and logging settings match the intended template.
+- [ ] Preserve the image version, service and container identity, host
+  networking, `/homebridge` bind mount, directory ownership, restart policy,
+  and logging settings. Check the template's declared `smarthome-network`
+  against the live stack; host networking should not be replaced with a bridge
+  network. Avoid pulling a different image during cutover unless intended.
+- [ ] Keep activation of the new Homebridge project gated until cutover.
+  Existing migrated stacks can continue to be reconciled by the combined
+  playbook. Confirm preparation does not stop or recreate Homebridge.
+- [x] Validate the staged host configuration with the intended project name,
+  using `sudo` to read the restricted `.env` file. The user ran the command
+  with no reported errors:
+
+  ```bash
+  sudo docker compose -p smarthome \
+    -f /opt/compose/smarthome/compose.yml config --quiet
+  ```
+
+- [x] Verify the environment file reports `root:root 600`:
+
+  ```bash
+  sudo stat -c '%U:%G %a %n' /opt/compose/smarthome/.env
+  ```
+
+- [ ] Compare the resolved non-secret settings with the live container and
+  saved Portainer definition without exposing credentials.
+- [ ] Disable the `smarthome` entry in Portainer deployment automation at
+  cutover and retain a working rollback path. Confirm directory preparation
+  remains available if it is still required by the native workflow.
+
+### 3. Cut over and verify
+
+- **Status:** The user considers the Homebridge migration complete after
+  starting it through Ansible, logging in, and confirming the native Compose
+  labels. Unchecked verification items below have not been independently
+  confirmed.
+- [x] Stop the Homebridge Portainer stack and start the native project through
+  Ansible. The user reports that Homebridge is working.
+- [x] Confirm the running container's Compose labels report project
+  `smarthome`, config `/opt/compose/smarthome/compose.yml`, and working
+  directory `/opt/compose/smarthome`.
+- [ ] Verify the running container's image, host network, mount path, and
+  restart policy. Inspect logs without exposing secrets.
+- [x] Confirm the Homebridge UI loads and login works after cutover.
+- [ ] Confirm existing accessories and pairings remain present and a
+  representative accessory or integration works. Investigate before making
+  pairing or configuration changes if they do not.
+- [ ] Rerun the combined native playbook and confirm Homebridge is not
+  unnecessarily recreated. Rerun Portainer automation and confirm it does not
+  take ownership back. Verify the website and Cloudflare routes remain healthy.
+- [ ] Observe Homebridge for an agreed period and check recovery after a
+  planned host or Docker restart when practical.
+
+### 4. Rollback and cleanup
+
+- [ ] If verification fails, stop the native Homebridge project and restore
+  the saved Portainer definition, image, mount path, and automation. Do not
+  overwrite the live configuration with the backup unless recovery requires
+  it; preserve any changes made since the backup.
+- [ ] Confirm the UI and representative integration work after rollback.
+- [ ] Keep the Portainer stack record during the observation period. Before
+  removing it, verify whether the installed Portainer version can remove only
+  the record without undeploying resources used by the native project.
+
+## Jellyfin migration
+
+Migrate only the `jellyfin` stack to the combined Ansible-managed native
+Compose workflow. The [current template](stacks/jellyfin.yml.j2) defines one
+container, two named volumes, two media bind mounts, and the external
+`pangolin_network`. The previously reported image was
+`jellyfin/jellyfin:10.11.8`. Recheck the live container before cutover.
+
+The reported volume inventory contains both `jellyfin-config` /
+`jellyfin-cache` and `jellyfin_jellyfin-config` /
+`jellyfin_jellyfin-cache`. Inspection identified the prefixed pair as active.
+Do not delete either pair; a wrong volume can make Jellyfin appear as a fresh
+installation.
+
+The user's container inspection on 2026-10-29 reported project and service
+`jellyfin`, Portainer config `/data/compose/2/docker-compose.yml`, image
+`jellyfin/jellyfin:10.11.8`, and image ID
+`sha256:1694ff069f0c9dafb283c36765175606866769f5d72f2ed56b6a0f1be922fc37`.
+Docker reported repository digest
+`jellyfin/jellyfin@sha256:1694ff069f0c9dafb283c36765175606866769f5d72f2ed56b6a0f1be922fc37`.
+The container started at `2026-10-30T02:04:41.106419158Z`, was running and
+healthy, used network mode `pangolin_network`, and had restart policy
+`unless-stopped`.
+
+The user's mount inspection identified these active writable mounts:
+
+| Type | Source or volume | Container destination |
+| --- | --- | --- |
+| Named volume | `jellyfin_jellyfin-config` | `/config` |
+| Named volume | `jellyfin_jellyfin-cache` | `/cache` |
+| Bind mount | `/mnt/truenas_shares/home` | `/home_videos` |
+| Bind mount | `/mnt/truenas_shares/movies` | `/movies` |
+
+Preserve the two active prefixed volumes. The separate `jellyfin-config` and
+`jellyfin-cache` volumes were present in the earlier inventory, but their use
+has not been established; do not remove them.
+Both active volumes use the `local` driver and have Compose project label
+`jellyfin`. Their Compose volume labels are `jellyfin-config` and
+`jellyfin-cache`, respectively. Retaining those project and logical names
+should resolve to the existing prefixed names; validate the rendered
+configuration before deployment.
+The native template now explicitly declares both active names as external.
+The combined playbook ensures those volumes exist with `state: present` and
+`recreate: never`. If either volume is missing, Ansible creates it empty:
+restoring existing data is a separate step.
+Jellyfin publishes `8096/tcp` and `7359/udp` on both IPv4 and IPv6, has
+supplemental group `3004`, and is attached to `pangolin_network`, a local
+bridge network.
+The user confirmed both expected NFSv4 mounts:
+
+| Host mountpoint | TrueNAS source |
+| --- | --- |
+| `/mnt/truenas_shares/home` | `192.168.86.200:/mnt/philbert/media/home_videos` |
+| `/mnt/truenas_shares/movies` | `192.168.86.200:/mnt/philbert/media/movies` |
+
+### 1. Inventory, backup, and baseline
+
+- [ ] Choose a maintenance window and record baseline UI access, existing
+  users and libraries, and playback of a representative media item.
+- [x] Record the container's Compose identity, image ID, start time, network
+  mode, restart policy, and health. Run on `container-manager`:
+
+  ```bash
+  docker inspect jellyfin \
+    --format 'project={{ index .Config.Labels "com.docker.compose.project" }} service={{ index .Config.Labels "com.docker.compose.service" }} config={{ index .Config.Labels "com.docker.compose.project.config_files" }} image={{ .Config.Image }} image_id={{ .Image }} started={{ .State.StartedAt }} status={{ .State.Status }} health={{ if .State.Health }}{{ .State.Health.Status }}{{ else }}none{{ end }} network_mode={{ .HostConfig.NetworkMode }} restart={{ .HostConfig.RestartPolicy.Name }}'
+  ```
+
+- [x] Record the image repository digest, if available:
+
+  ```bash
+  docker image inspect \
+    "$(docker inspect --format '{{.Image}}' jellyfin)" \
+    --format 'image_id={{ .Id }} repo_digests={{ json .RepoDigests }}'
+  ```
+
+- [x] Identify the **actual mounted volume names** for `/config` and `/cache`
+  and the host sources for the media bind mounts:
+
+  ```bash
+  docker inspect jellyfin \
+    --format '{{ range .Mounts }}type={{ .Type }} name={{ .Name }} source={{ .Source }} destination={{ .Destination }} rw={{ .RW }}{{ "\n" }}{{ end }}'
+  ```
+
+- [x] Inspect the active volume names, not guessed names:
+
+  ```bash
+  docker volume inspect jellyfin_jellyfin-config jellyfin_jellyfin-cache
+  ```
+
+  Volume metadata may reveal host paths; avoid sharing any sensitive
+  information.
+- [x] Record published ports, supplemental group IDs, and attached networks:
+
+  ```bash
+  docker port jellyfin
+  docker inspect jellyfin \
+    --format 'groups={{ json .HostConfig.GroupAdd }}{{ "\n" }}{{ range $name, $_ := .NetworkSettings.Networks }}network={{ $name }}{{ "\n" }}{{ end }}'
+  docker network inspect pangolin_network \
+    --format 'name={{ .Name }} driver={{ .Driver }} scope={{ .Scope }}'
+  ```
+
+- [x] Verify the actual TrueNAS NFS mounts are present at the expected exact
+  mountpoints, not merely empty local directories:
+
+  ```bash
+  findmnt -rn -M /mnt/truenas_shares/home -o TARGET,SOURCE,FSTYPE
+  findmnt -rn -M /mnt/truenas_shares/movies -o TARGET,SOURCE,FSTYPE
+  ```
+
+  The reported sources match the configured shares. A missing mount must block
+  cutover rather than cause an empty library scan. The existing NFS setup lives in
+  [`portainer_setup.yml`](tasks/portainer_setup.yml); preserve it when
+  Portainer is eventually removed.
+- [x] Verify Jellyfin can read and play media from the mounted shares. The user
+  reports being able to view media before cutover.
+- [x] Confirm backup readiness for the active Jellyfin configuration volume
+  and save the Portainer stack definition and deployment settings. The user
+  confirmed a recent recoverable backup covers the config volume and that the
+  Portainer definition is saved. The recorded rollback image is
+  `jellyfin/jellyfin:10.11.8`.
+- [ ] Confirm backup coverage for any required NFS media and storage outside
+  the VM; those may require separate backups.
+
+### 2. Prepare native Compose
+
+- [x] Add Jellyfin to the combined Ansible playbook at
+  `/opt/compose/jellyfin`, with project name `jellyfin` and activation gated
+  until cutover. Existing migrated stacks are reconciled during a combined
+  playbook run.
+- [x] Add an empty `.env` template and configure its rendering as `root:root` /
+  `0600`. Host-side permissions were verified as `root:root 600`. Supply any
+  future container environment variables explicitly; Compose `.env`
+  interpolation alone does not inject them into the container.
+- [x] Declare the **exact active volume names** as external and add Ansible
+  volume tasks using `state: present` and `recreate: never`. Local Compose
+  validation resolves the expected names.
+- [x] Confirm the active volumes exist and Jellyfin can use their data. The
+  preparation run found both volumes, and the user confirmed Jellyfin and media
+  work after cutover. The volume tasks create missing volumes empty; on a fresh
+  install or after data loss, restore existing configuration data before
+  starting Jellyfin.
+- [ ] Preserve the verified image, `jellyfin` service and container identity,
+  `pangolin_network` as an existing external network, supplemental fileshare
+  group, `8096/tcp` and `7359/udp` mappings, media mount sources and targets,
+  and restart policy. Compare against the live container rather than relying
+  on the template alone.
+- [x] Render the staged configuration without activating Jellyfin and validate
+  it on the host:
+
+  ```bash
+  sudo docker compose -p jellyfin \
+    -f /opt/compose/jellyfin/compose.yml config --quiet
+  sudo stat -c '%U:%G %a %n' /opt/compose/jellyfin/.env
+  ```
+
+  The `.env` file should report `root:root 600`. Compare the rendered
+  non-secret settings and resolved volume names with the inventory. Do not
+  share resolved configuration if it contains secrets. Host validation passed,
+  permissions were `root:root 600`, and the resolved settings matched the
+  recorded image, mounts, volume names, network, ports, group, and restart
+  policy.
+- [x] Add an Ansible guard that checks each Jellyfin mountpoint, expected NFS
+  source, and filesystem type before the gated deployment task.
+- [x] Fix and validate the mount guard in Ansible check mode. The read-only
+  `findmnt` task now runs in check mode, and both expected mounts passed on
+  `container-manager`.
+- [x] Exercise the guard's failure behavior safely: an intentionally incorrect
+  expected home-videos source caused the assertion to fail before Jellyfin
+  deployment. A missing-mount case was not separately tested. The guard checks
+  mount metadata at Ansible deployment time, not NAS responsiveness or
+  Jellyfin's automatic restart after a host reboot.
+- [x] Add native Ansible provisioning for the external `pangolin_network`;
+  the preparation run reported the existing network unchanged.
+- [ ] Document or provision the NFS mounts for a fresh installation. The
+  existing mount tasks are in the Portainer workflow; the native playbook
+  checks but does not create them.
+- [ ] Save and document an Ansible-based rollback path. At cutover, remove
+  Jellyfin from the Portainer deployment list while preserving its stack record
+  and saved definition. Jellyfin has been removed from the list in the
+  working tree; verify the intended automation uses that change. Do not
+  delete the Portainer stack: removal may affect the running native project.
+
+### 3. Cut over and verify
+
+- [x] Deploy the gated Jellyfin task using the combined **Ansible playbook**.
+  Inspection showed the native Compose file, expected image, volumes and bind
+  mounts; the container subsequently reported healthy. Continue to pass
+  `-e start_containers=true` when Jellyfin should be reconciled.
+- [ ] Confirm the Portainer-managed Jellyfin stack was stopped without
+  removing volumes or media, and document the full rollback procedure.
+- [x] Confirm the running container uses the native Compose file and the same
+  mounted volumes, NFS paths, and image:
+
+  ```bash
+  docker inspect jellyfin \
+    --format 'project={{ index .Config.Labels "com.docker.compose.project" }} config={{ index .Config.Labels "com.docker.compose.project.config_files" }} image_id={{ .Image }}'
+  docker inspect jellyfin \
+    --format '{{ range .Mounts }}type={{ .Type }} name={{ .Name }} source={{ .Source }} destination={{ .Destination }} rw={{ .RW }}{{ "\n" }}{{ end }}'
+  ```
+
+  The reported config label points to `/opt/compose/jellyfin/compose.yml`.
+- [ ] Confirm the running container's ports, groups, and network after cutover
+  with `docker port` and `docker inspect`.
+- [x] Verify the UI, libraries, and media playback. The user reports Jellyfin
+  and media work after cutover.
+- [ ] Confirm existing users and external access against the baseline. Do not
+  run a library scan against missing mounts.
+- [x] Check Jellyfin's container ID and start time across the requested repeat
+  Ansible deployment. Both reported values were unchanged; playbook output was
+  not provided.
+- [ ] Rerun Portainer automation and confirm it does not take ownership back.
+  Verify the previously migrated stacks remain healthy.
+- [ ] Observe Jellyfin for an agreed period and verify recovery after a planned
+  host or Docker restart when practical.
+
+### 4. Rollback and cleanup
+
+- [ ] If verification fails, stop the native Jellyfin project and use the saved
+  configuration and verified Ansible deployment workflow to restore service.
+  Preserve the active volumes and media mounts; do not run volume-removal or
+  prune commands. Confirm the UI and playback after rollback.
+- [ ] Retain the Portainer stack record until safe record-only removal has
+  been verified for the installed version. Keep both sets of similarly named
+  Jellyfin volumes until their use is understood and a separate cleanup is
+  planned.
 
 ## Later migrations
 
