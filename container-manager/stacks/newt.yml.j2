@@ -1,5 +1,10 @@
 services:
   newt:
+    env_file:
+      - path: ./id.env
+        format: raw
+      - path: ./secret.env
+        format: raw
     image: fosrl/newt:{{ newt_version }}
     container_name: newt
     restart: unless-stopped
@@ -10,12 +15,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - {{ blueprint_file_path }}:/app/config/home1_pangolin_blueprint.yml
     environment:
-      - PANGOLIN_ENDPOINT=https://pangolin.{{ domain }}
-      - NEWT_ID={{ newt_id }}
-      - NEWT_SECRET={{ newt_secret }}
-      - DOCKER_SOCKET=unix:///var/run/docker.sock
-      - DNS=1.1.1.1
-      - BLUEPRINT_FILE=/app/config/home1_pangolin_blueprint.yml
+      - PANGOLIN_ENDPOINT=${PANGOLIN_ENDPOINT:?Pangolin endpoint is not set}
+      - DOCKER_SOCKET=${DOCKER_SOCKET:?Docker socket is not set}
+      - DNS=${DNS:?DNS is not set}
+      - BLUEPRINT_FILE=${BLUEPRINT_FILE:?Blueprint file is not set}
     networks:
       - pangolin_network
 networks:
