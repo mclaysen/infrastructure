@@ -66,6 +66,9 @@ blueprint_file_path: /home/{{ username }}/docker/newt/config/home1_pangolin_blue
 #Jellyfin
 jellyfin_version: 10.11.8
 
+#jellystat
+jellystat_version: 1.1.12@sha256:e61c759ec706da378bc8374e797da1dfd298ab30f804cefd82d192c301a888c7
+
 #smarthome stack
 homebridge_version: '2026-06-24'
 homebridge_config_dir: /home/{{ username }}/docker/smarthome/homebridge
