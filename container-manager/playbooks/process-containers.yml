@@ -19,8 +19,9 @@
         - /opt/compose/cloudflared
         - /opt/compose/smarthome
         - /opt/compose/jellyfin
+        - /opt/compose/jellystat
 
-    - name: Create mclaysen_website compose file
+    - name: Create compose files
       ansible.builtin.template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -30,8 +31,23 @@
         - {src: ../stacks/cloudflared.yml.j2, dest: /opt/compose/cloudflared/compose.yml }
         - {src: ../stacks/smarthome.yml.j2, dest: /opt/compose/smarthome/compose.yml }
         - {src: ../stacks/jellyfin.yml.j2, dest: /opt/compose/jellyfin/compose.yml }
+        - {src: ../stacks/jellystat.yml.j2, dest: /opt/compose/jellystat/compose.yml }
 
-    - name: Create mclaysen_website environment file
+
+    - name: Validate required secrets
+      ansible.builtin.assert:
+        that:
+          - item.value is string
+          - item.value | length > 0
+          - '"\n" not in item.value'
+          - '"\r" not in item.value'
+        fail_msg: Jellystat secrets must be nonempty, single-line strings.
+      loop:
+        - value: "{{ jellystat_db_password }}"
+        - value: "{{ jellystat_jwt_secret }}"
+      no_log: true
+
+    - name: Create environment files
       ansible.builtin.template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -44,6 +60,9 @@
         - {src: ../stacks/cloudflared.env.j2, dest: /opt/compose/cloudflared/.env }
         - {src: ../stacks/smarthome.env.j2, dest: /opt/compose/smarthome/.env }
         - {src: ../stacks/jellyfin.env.j2, dest: /opt/compose/jellyfin/.env }
+        - {src: ../stacks/jellystat.env.j2, dest: /opt/compose/jellystat/.env }
+        - {src: ../stacks/jellystat.db-pass.env.j2, dest: /opt/compose/jellystat/db-secrets.env }
+        - {src: ../stacks/jellystat.jwt-token.env.j2, dest: /opt/compose/jellystat/jwt-token.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -74,15 +93,6 @@
         name: pangolin_network
         state: present
 
-    - name: Ensure Jellyfin volumes exist
-      community.docker.docker_volume:
-        name: "{{ item }}"
-        state: present
-        recreate: never
-      loop:
-        - jellyfin_jellyfin-config
-        - jellyfin_jellyfin-cache
-
     - name: Inspect Jellyfin media mounts
       ansible.builtin.command:
         argv:
@@ -101,7 +111,6 @@
       register: jellyfin_mounts
       changed_when: false
       failed_when: false
-      when: start_containers | default(false) | bool
       check_mode: false
 
     - name: Require the expected Jellyfin NFS mounts
@@ -117,11 +126,15 @@
       loop: "{{ jellyfin_mounts.results }}"
       loop_control:
         label: "{{ item.item.path }}"
-      when: start_containers | default(false) | bool
 
     - name: Deploy jellyfin container
       community.docker.docker_compose_v2:
         project_src: /opt/compose/jellyfin
         remove_orphans: true
         project_name: jellyfin
-      when: start_containers | default(false) | bool
+
+    - name: Deploy jellystat container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/jellystat
+        remove_orphans: true
+        project_name: jellystat
