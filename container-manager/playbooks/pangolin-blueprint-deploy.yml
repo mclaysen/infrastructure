@@ -5,12 +5,6 @@
   vars_files:
     - ../../group_vars/portainer_managers/vars.yml
     - ../../group_vars/portainer_managers/vault.yml
-  vars:
-    portainer_token: "{{ portainer_api_token }}"
-    endpoint_id: "{{ endpoint_id }}"
-    name: newt
-    stack_type: standalone
-    rendered_dir: /tmp/portainer-stacks
   handlers:
     - ansible.builtin.import_tasks: ../handlers/main.yml
   tasks:
@@ -30,40 +24,4 @@
         owner: "{{ username }}"
         group: "{{ username }}"
         mode: '0644'
-      notify: Restart newt
-
-    - name: Create temporary directory for rendered stack files
-      ansible.builtin.file:
-        path: "{{ rendered_dir }}"
-        state: directory
-      delegate_to: localhost
-      become: false
-
-    - name: Render compose templates for stacks
-      ansible.builtin.template:
-        src: ../stacks/newt.yml.j2
-        dest: "{{ rendered_dir }}/{{ name }}.yml"
-      no_log: true
-      delegate_to: localhost
-      become: false
-      run_once: true
-
-    - name: Deploy or update Portainer stacks from compose files
-      bgtor.portainer.portainer_stack:
-        portainer_url: "{{ portainer_manager_endpoint }}"
-        portainer_token: "{{ portainer_token }}"
-        name: "{{name}}"
-        stack_type: "{{ stack_type }}"
-        stack_source: file
-        endpoint_id: "{{ endpoint_id }}"
-        file: "{{ rendered_dir }}/newt.yml"
-        state: present
-        timeout: 300
-      register: stack_result
-      until: stack_result is not failed
-      retries: 5
-      delay: 30
-      delegate_to: localhost
-      become: false
-      run_once: true
       notify: Restart newt
