@@ -1095,6 +1095,125 @@ Rollback is not yet a tested procedure. Before attempting it:
 - [ ] Retain the Portainer stack record until record-only removal is known to
   be safe. Do not remove or prune volumes as part of this migration.
 
+## Next migration: Newt
+
+Migrate only Newt to the combined Ansible-managed Compose workflow. The
+[current template](stacks/newt.yml.j2) defines one container, a blueprint
+bind mount, Docker socket access, credentials, and the external
+`pangolin_network`. The live configuration must be inventoried rather than
+assumed from the template.
+
+Newt also has two Portainer deployment paths:
+[`portainer-stacks.yml`](playbooks/portainer-stacks.yml) and
+[`pangolin-blueprint-deploy.yml`](playbooks/pangolin-blueprint-deploy.yml).
+The latter updates the blueprint and can restart Newt. Both are imported by
+[`container-manager.yml`](../container-manager.yml). A migration must
+preserve blueprint updates and their restart behavior without allowing either
+path to reclaim the native stack. Do not share credentials, blueprint
+contents, container environment variables, or resolved secret-bearing Compose
+configuration.
+
+### 1. Inventory and baseline
+
+- [ ] Choose a maintenance window and identify representative
+  Pangolin-exposed services to check before and after cutover. A Newt
+  interruption may affect access to those services; establish an independent
+  management path and a rollback decision point.
+- [ ] Record the live Compose project, service, configuration path, image,
+  status, and restart policy on `container-manager`:
+
+  ```bash
+  docker inspect newt \
+    --format 'name={{ .Name }} project={{ index .Config.Labels "com.docker.compose.project" }} service={{ index .Config.Labels "com.docker.compose.service" }} config={{ index .Config.Labels "com.docker.compose.project.config_files" }} image={{ .Config.Image }} image_id={{ .Image }} started={{ .State.StartedAt }} status={{ .State.Status }} health={{ if .State.Health }}{{ .State.Health.Status }}{{ else }}none{{ end }} restart={{ .HostConfig.RestartPolicy.Name }}'
+  ```
+
+- [ ] Record the running image's ID and available repository digests; decide
+  how to preserve the same release through cutover and rollback.
+
+  ```bash
+  docker image inspect \
+    "$(docker inspect --format '{{.Image}}' newt)" \
+    --format 'image_id={{ .Id }} repo_digests={{ json .RepoDigests }}'
+  ```
+
+- [ ] Record actual mount sources, destinations, and access modes, including
+  the blueprint and Docker socket; inspect the blueprint's availability,
+  ownership, and permissions without displaying its contents.
+
+  ```bash
+  docker inspect newt \
+    --format '{{ .Name }}{{ "\n" }}{{ range .Mounts }}type={{ .Type }} name={{ .Name }} source={{ .Source }} destination={{ .Destination }} rw={{ .RW }}{{ "\n" }}{{ end }}'
+  ```
+
+- [ ] Record published ports, network membership, and configured extra hosts;
+  compare them with the template and preserve the existing network.
+
+  ```bash
+  docker port newt
+  docker inspect newt \
+    --format '{{ .Name }}{{ range $name, $_ := .NetworkSettings.Networks }} network={{ $name }}{{ end }} extra_hosts={{ json .HostConfig.ExtraHosts }}'
+  ```
+
+- [ ] Confirm Newt is connected and the selected Pangolin services work.
+  Review logs privately, without sharing credentials or personal data.
+- [ ] Save the Portainer definition, deployment settings, blueprint, and
+  required recovery credentials securely. Record the backup and rollback
+  decision; do not assume a saved definition alone is a tested recovery path.
+
+### 2. Prepare native Compose and automation
+
+- [ ] Add preparation to the combined Ansible playbook, preserving the
+  observed project and container names, image, restart policy, network,
+  mounts, extra hosts, and non-secret settings. Keep activation gated during
+  preparation until the agreed cutover.
+- [ ] Preserve the effective Newt credentials and verify them without
+  printing values. Account for Compose interpolation and special characters;
+  render secret files securely with `no_log: true` and restrictive permissions.
+  Do not duplicate raw env-file secrets in `environment`, which overrides
+  them. If using `env_file: format: raw`, verify that the host Compose version
+  supports it.
+- [ ] Prepare the existing external network and blueprint bind mount without
+  replacing or removing shared resources. Ensure blueprint updates remain
+  Ansible-managed and notify a Newt restart when needed; avoid a restart when
+  the blueprint is unchanged. Check the existing handler's behavior before
+  changing it.
+- [ ] Plan and implement removal of **both** Portainer deployment paths at
+  cutover. Preserve blueprint rendering and restart notification when changing
+  the blueprint playbook; do not merely remove Newt from the stack list.
+  Review the normal `container-manager.yml` workflow as well as direct
+  playbook runs so neither path reclaims Newt.
+- [ ] Validate Ansible syntax and the staged Compose configuration without
+  exposing secrets. Compare the rendered non-secret settings and effective
+  credentials with the live baseline. Confirm the preparation run does not
+  recreate or restart Newt or interrupt Pangolin.
+- [ ] Document a reviewed Ansible-based rollback procedure before cutover:
+  prevent competing reconcilers, preserve the blueprint and network, restore
+  the intended image and effective credentials, and verify Pangolin access.
+  Do not treat rollback as tested unless it has actually been exercised.
+
+### 3. Cut over and verify
+
+- [ ] In the maintenance window, disable both Portainer deployment paths,
+  stop the old stack using the agreed sequence, and activate Newt through the
+  combined Ansible playbook. Retain the Portainer stack record and shared
+  network; do not remove or prune resources.
+- [ ] Inspect Newt's native Compose labels, image ID, mounts, network, extra
+  hosts, restart policy, status, and any health check against the baseline.
+  Review recent logs privately and confirm Newt reconnects.
+- [ ] Verify the selected Pangolin-exposed services against the baseline.
+  Check access from an appropriate external client as well as any applicable
+  direct path.
+- [ ] Record Newt's container ID and start time, rerun the native deployment,
+  and confirm neither changed unnecessarily. Separately verify blueprint
+  changes trigger the intended restart and unchanged blueprints do not.
+- [ ] At an agreed time, verify the normal automation paths do not redeploy
+  Newt through Portainer and that blueprint updates still work. Review each
+  playbook's other side effects before running it; do not treat a full
+  `container-manager.yml` run as a read-only test.
+- [ ] Observe Newt and, when practical, test recovery after a planned host or
+  Docker restart. Keep the Portainer stack record until record-only removal is
+  known to be safe.
+
 ## Later migrations
 
 Use the website pilot's lessons to plan the other stacks separately. Stateful
