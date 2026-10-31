@@ -20,6 +20,7 @@
         - /opt/compose/smarthome
         - /opt/compose/jellyfin
         - /opt/compose/jellystat
+        - /opt/compose/newt
 
     - name: Create compose files
       ansible.builtin.template:
@@ -32,7 +33,7 @@
         - {src: ../stacks/smarthome.yml.j2, dest: /opt/compose/smarthome/compose.yml }
         - {src: ../stacks/jellyfin.yml.j2, dest: /opt/compose/jellyfin/compose.yml }
         - {src: ../stacks/jellystat.yml.j2, dest: /opt/compose/jellystat/compose.yml }
-
+        - {src: ../stacks/newt.yml.j2, dest: /opt/compose/newt/compose.yml }
 
     - name: Validate required secrets
       ansible.builtin.assert:
@@ -45,6 +46,8 @@
       loop:
         - value: "{{ jellystat_db_password }}"
         - value: "{{ jellystat_jwt_secret }}"
+        - value: "{{ newt_id }}"
+        - value: "{{ newt_secret }}"
       no_log: true
 
     - name: Create environment files
@@ -63,6 +66,9 @@
         - {src: ../stacks/jellystat.env.j2, dest: /opt/compose/jellystat/.env }
         - {src: ../stacks/jellystat.db-pass.env.j2, dest: /opt/compose/jellystat/db-secrets.env }
         - {src: ../stacks/jellystat.jwt-token.env.j2, dest: /opt/compose/jellystat/jwt-token.env }
+        - {src: ../stacks/newt.env.j2, dest: /opt/compose/newt/.env }
+        - {src: ../stacks/newt.newt-id.env.j2, dest: /opt/compose/newt/id.env }
+        - {src: ../stacks/newt.newt-secret.env.j2, dest: /opt/compose/newt/secret.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -138,3 +144,9 @@
         project_src: /opt/compose/jellystat
         remove_orphans: true
         project_name: jellystat
+
+    - name: Deploy newt container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/newt
+        remove_orphans: true
+        project_name: newt
