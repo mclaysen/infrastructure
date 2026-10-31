@@ -22,7 +22,7 @@ reverse proxy is configured to forward `mclaysen.com` to `192.168.86.202:5001`.
   removes the website from the Portainer stack list. These changes have not
   been verified on the host.
 - The native playbook now deploys the website, Cloudflare, Homebridge,
-  Jellyfin, and Jellystat unconditionally. It is not imported by the normal
+  Jellyfin, Jellystat, and Newt unconditionally. It is not imported by the normal
   `container-manager.yml` run, so a regular run will not deploy website
   updates. The preferred ongoing approach is one combined playbook that
   reconciles migrated stacks; document how it will be run.
@@ -1113,13 +1113,21 @@ path to reclaim the native stack. Do not share credentials, blueprint
 contents, container environment variables, or resolved secret-bearing Compose
 configuration.
 
+**Cutover in progress:** After preparation, the user manually stopped the
+Newt stack in Portainer to begin deployment. A subsequent Newt inspection
+was reported to return `no such object: newt`. The user then reported running
+the native deployment command. A follow-up inspection reported a running
+container using the native Compose file and the original image ID, with zero
+restarts. The user confirmed that Pangolin shows Newt connected and the
+selected sites work externally.
+
 ### 1. Inventory and baseline
 
 - [ ] Choose a maintenance window and identify representative
   Pangolin-exposed services to check before and after cutover. A Newt
   interruption may affect access to those services; establish an independent
   management path and a rollback decision point.
-- [ ] Record the live Compose project, service, configuration path, image,
+- [x] Record the live Compose project, service, configuration path, image,
   status, and restart policy on `container-manager`:
 
   ```bash
@@ -1127,7 +1135,13 @@ configuration.
     --format 'name={{ .Name }} project={{ index .Config.Labels "com.docker.compose.project" }} service={{ index .Config.Labels "com.docker.compose.service" }} config={{ index .Config.Labels "com.docker.compose.project.config_files" }} image={{ .Config.Image }} image_id={{ .Image }} started={{ .State.StartedAt }} status={{ .State.Status }} health={{ if .State.Health }}{{ .State.Health.Status }}{{ else }}none{{ end }} restart={{ .HostConfig.RestartPolicy.Name }}'
   ```
 
-- [ ] Record the running image's ID and available repository digests; decide
+  On 2026-10-31, Newt reported project and service `newt`, config
+  `/data/compose/4/docker-compose.yml`, image `fosrl/newt:1.16.0`, image ID
+  `sha256:345fdeb369be6608d82c41d70637636c78b2c04a6112ff6ec20fc21c48afc899`,
+  start time `2026-10-30T03:22:57.730358856Z`, status `running`, no Docker
+  health check, and restart policy `unless-stopped`.
+
+- [x] Record the running image's ID and available repository digests; decide
   how to preserve the same release through cutover and rollback.
 
   ```bash
@@ -1136,7 +1150,20 @@ configuration.
     --format 'image_id={{ .Id }} repo_digests={{ json .RepoDigests }}'
   ```
 
-- [ ] Record actual mount sources, destinations, and access modes, including
+  The reported image ID is
+  `sha256:345fdeb369be6608d82c41d70637636c78b2c04a6112ff6ec20fc21c48afc899`,
+  and the repository digest is
+  `fosrl/newt@sha256:345fdeb369be6608d82c41d70637636c78b2c04a6112ff6ec20fc21c48afc899`.
+  The user chose to pin the native deployment to
+  `fosrl/newt:1.16.0@sha256:345fdeb369be6608d82c41d70637636c78b2c04a6112ff6ec20fc21c48afc899`.
+  The working-tree `newt_version` now uses the recorded digest. A read-only
+  Docker Hub registry inspection confirmed it is a multi-platform image index;
+  the previously configured digest
+  `sha256:9e5eed53ecdaeebff11640c58b29adab72e2c4ac5652d391f92c92133f1534ba`
+  is its `linux/amd64` image manifest. The staged reference and running
+  platform have not yet been verified on the host.
+
+- [x] Record actual mount sources, destinations, and access modes, including
   the blueprint and Docker socket; inspect the blueprint's availability,
   ownership, and permissions without displaying its contents.
 
@@ -1145,8 +1172,13 @@ configuration.
     --format '{{ .Name }}{{ "\n" }}{{ range .Mounts }}type={{ .Type }} name={{ .Name }} source={{ .Source }} destination={{ .Destination }} rw={{ .RW }}{{ "\n" }}{{ end }}'
   ```
 
-- [ ] Record published ports, network membership, and configured extra hosts;
-  compare them with the template and preserve the existing network.
+  The reported mounts are `/var/run/docker.sock` at the same container path
+  read-only, and
+  `/home/ansible/docker/newt/config/home1_pangolin_blueprint.yml` at
+  `/app/config/home1_pangolin_blueprint.yml` read-write. The blueprint is a
+  5,924-byte regular file owned by `ansible:ansible` with mode `0644`.
+
+- [x] Record published ports, network membership, and configured extra hosts.
 
   ```bash
   docker port newt
@@ -1154,38 +1186,109 @@ configuration.
     --format '{{ .Name }}{{ range $name, $_ := .NetworkSettings.Networks }} network={{ $name }}{{ end }} extra_hosts={{ json .HostConfig.ExtraHosts }}'
   ```
 
-- [ ] Confirm Newt is connected and the selected Pangolin services work.
+  The reported container is attached to `pangolin_network` and has no
+  published ports. Extra hosts are `host.docker.internal:host-gateway` and
+  `pangolin.mclaysen.com:198.46.215.121`.
+- [x] Compare the post-deployment network, ports, and extra hosts with the
+  live baseline. Newt reports the same `pangolin_network`, no published ports,
+  and the same two extra-host mappings.
+
+- [x] Confirm Newt is connected and the selected Pangolin services work.
   Review logs privately, without sharing credentials or personal data.
-- [ ] Save the Portainer definition, deployment settings, blueprint, and
+  The reported logs show Jellystat's target refusing connections from
+  `03:51:55` through `04:03:55`, then changing from unhealthy to healthy at
+  `04:04:10`. This is consistent with the earlier Jellystat recovery, but
+  these historical messages do not establish Newt's current connection or
+  end-to-end Pangolin access. The user confirmed that Pangolin shows Newt
+  connected and that `media-stats` and `photos.mclaysen.com` are accessible
+  through Pangolin from an external connection.
+- [x] Save the Portainer definition, deployment settings, blueprint, and
   required recovery credentials securely. Record the backup and rollback
   decision; do not assume a saved definition alone is a tested recovery path.
+  The user confirmed the definition and deployment settings, blueprint, and
+  recovery credentials are saved and accessible. The user chose to plan for
+  restoring Portainer management through Ansible if needed; the recovery
+  procedure remains to be prepared and reviewed.
 
 ### 2. Prepare native Compose and automation
 
-- [ ] Add preparation to the combined Ansible playbook, preserving the
-  observed project and container names, image, restart policy, network,
-  mounts, extra hosts, and non-secret settings. Keep activation gated during
-  preparation until the agreed cutover.
-- [ ] Preserve the effective Newt credentials and verify them without
-  printing values. Account for Compose interpolation and special characters;
-  render secret files securely with `no_log: true` and restrictive permissions.
-  Do not duplicate raw env-file secrets in `environment`, which overrides
-  them. If using `env_file: format: raw`, verify that the host Compose version
-  supports it.
-- [ ] Prepare the existing external network and blueprint bind mount without
-  replacing or removing shared resources. Ensure blueprint updates remain
-  Ansible-managed and notify a Newt restart when needed; avoid a restart when
-  the blueprint is unchanged. Check the existing handler's behavior before
-  changing it.
-- [ ] Plan and implement removal of **both** Portainer deployment paths at
-  cutover. Preserve blueprint rendering and restart notification when changing
-  the blueprint playbook; do not merely remove Newt from the stack list.
-  Review the normal `container-manager.yml` workflow as well as direct
-  playbook runs so neither path reclaims Newt.
-- [ ] Validate Ansible syntax and the staged Compose configuration without
-  exposing secrets. Compare the rendered non-secret settings and effective
-  credentials with the live baseline. Confirm the preparation run does not
-  recreate or restart Newt or interrupt Pangolin.
+- [x] Add Newt preparation and a deployment task to the combined Ansible
+  playbook, with activation gated during preparation. After cutover, the user
+  chose unconditional reconciliation and the gate was removed from the
+  working tree. Newt secret validation remains unconditional and can stop
+  reconciliation of the other stacks.
+- [ ] Compare the rendered project and container names, image, restart policy,
+  network, mounts, extra hosts, and non-secret settings with the live baseline.
+  Verify the staged image reference and host platform before deployment.
+- [x] Add separate raw credential templates without duplicating their keys in
+  Compose `environment`. The working-tree playbook renders environment files
+  as `root:root` / `0600` with `no_log: true`.
+- [x] Verify that the host Compose version supports `env_file: format: raw`.
+  The earlier Jellystat check on this host reported Compose `v5.4.0` for both
+  the `ansible` user and `sudo`.
+- [x] Verify actual rendered-file permissions. The user reported `.env`,
+  `id.env`, and `secret.env` as `root:root` / `0600`.
+- [ ] Verify effective Newt credentials without printing values. Account for
+  Compose interpolation and special characters. The old container was stopped
+  before its effective credentials were compared with the staged files. The
+  native container established a tunnel and the selected sites work, but
+  credential equality with the old container has not been verified.
+- [x] Retain Ansible-managed blueprint rendering and the existing Newt restart
+  notification in the working tree; remove the unconditional Compose restart
+  task.
+- [ ] Verify the existing external network and blueprint bind mount are
+  preserved without replacing shared resources. The post-deployment
+  inspection shows the same network name and blueprint bind mount as before
+  cutover; the network's prior ID was not recorded.
+- [x] Verify an unchanged blueprint does not restart Newt. Both the
+  check-mode and normal blueprint playbook runs reported `changed=0` and
+  `failed=0`. Before the normal run, Newt reported ID
+  `bfc30df8a88a17833bd3947f176267d57652120ce729b393b2eb9fc509aba5c9`
+  and start time `2026-10-31T05:26:08.125898049Z`; both were unchanged after
+  the run.
+- [x] Verify a changed blueprint triggers the intended restart. With the
+  user's approval, a temporary YAML comment was added to the blueprint
+  template and then removed. Each normal blueprint playbook run reported the
+  template and `Restart newt` handler changed, with no failures. The
+  container ID remained
+  `bfc30df8a88a17833bd3947f176267d57652120ce729b393b2eb9fc509aba5c9`;
+  its start time changed from `2026-10-31T05:26:08.125898049Z` to
+  `2026-10-31T05:39:59.31908749Z`, then
+  `2026-10-31T05:40:40.987992698Z`. After each restart, Newt logged that its
+  tunnel was established and HTTP checks for media-stats and photos returned
+  200. Immediately after the second restart media-stats first returned 502,
+  then returned 200 on a subsequent check. The temporary source change was
+  removed, and a final blueprint check-mode run reported `changed=0` and
+  `failed=0`. HTTP status checks do not prove full application functionality
+  or that a substantive routing change would be applied correctly.
+- [x] Remove Newt from the general Portainer stack list and remove the
+  Portainer deployment task from the blueprint playbook in the working tree.
+  The blueprint playbook does not reconcile native Compose configuration; the
+  combined deployment playbook remains a separate operation.
+- [ ] Verify the normal `container-manager.yml` workflow and direct playbook
+  runs do not reclaim Newt through Portainer. The blueprint playbook ran with
+  no changes and did not restart or recreate Newt; the general Portainer
+  playbook and full workflow remain unverified.
+- [x] Validate the local Newt Compose template with synthetic values. Compose
+  2.31.0 accepted the configuration and represented literal dollar signs with
+  Compose escaping in canonical output. A synthetic deployment without the
+  new env files failed validation.
+- [x] Validate Ansible syntax for the combined and blueprint playbooks. The
+  user ran both syntax checks successfully with the Vault password file; both
+  reported the existing `home_server` group/host naming warning. The combined
+  playbook syntax check also passed after removing the Newt gate.
+- [x] Validate the staged host Compose configuration without exposing
+  secrets. The user confirmed `docker compose config --quiet` exited
+  successfully.
+- [x] Confirm the preparation run did not recreate or restart Newt. The run
+  with `deploy_container=false` rendered the Newt directory and templates,
+  passed secret validation, and skipped the Newt deployment task. Its recap
+  reported `changed=3`, `failed=0`, and `skipped=1`; the other deployment
+  tasks reported `ok`. Before the run, Newt reported ID
+  `dc011a841f3a8d1aa5f75f02359bfc9aeea050f16df46e12146fdf71efb1d2b4`,
+  start time `2026-10-30T03:22:57.730358856Z`, and status `running`. The
+  post-run inspection reported the same ID, start time, and running status;
+  Pangolin access was not rechecked before the old stack was stopped.
 - [ ] Document a reviewed Ansible-based rollback procedure before cutover:
   prevent competing reconcilers, preserve the blueprint and network, restore
   the intended image and effective credentials, and verify Pangolin access.
@@ -1196,16 +1299,38 @@ configuration.
 - [ ] In the maintenance window, disable both Portainer deployment paths,
   stop the old stack using the agreed sequence, and activate Newt through the
   combined Ansible playbook. Retain the Portainer stack record and shared
-  network; do not remove or prune resources.
-- [ ] Inspect Newt's native Compose labels, image ID, mounts, network, extra
+  network; do not remove or prune resources. The user has manually stopped
+  the old Newt stack in Portainer and reported running the native activation
+  command. A container inspection shows native Compose ownership and running
+  status; the play recap has not been reported.
+- [x] Inspect Newt's native Compose labels, image ID, mounts, network, extra
   hosts, restart policy, status, and any health check against the baseline.
-  Review recent logs privately and confirm Newt reconnects.
-- [ ] Verify the selected Pangolin-exposed services against the baseline.
-  Check access from an appropriate external client as well as any applicable
-  direct path.
-- [ ] Record Newt's container ID and start time, rerun the native deployment,
-  and confirm neither changed unnecessarily. Separately verify blueprint
-  changes trigger the intended restart and unchanged blueprints do not.
+  Review recent logs privately and confirm Newt reconnects. Post-deployment
+  inspection reported project `newt`, config
+  `/opt/compose/newt/compose.yml`, status `running`, zero restarts,
+  restart policy `unless-stopped`, and the same image ID as before cutover.
+  Pangolin shows Newt connected. The service label is `newt` and there is no
+  Docker health check, as before. The socket and blueprint mounts, network,
+  extra hosts, and absence of published ports match the earlier inspection.
+  Recent logs reported a WebSocket connection, an established tunnel, and
+  healthy initial target checks. They also reported that Newt 1.19.0 is
+  available; the migration retains the pinned 1.16.0 image.
+- [x] Verify the selected Pangolin-exposed services from an external client
+  against the baseline. The user confirmed that the selected sites work
+  through Pangolin externally after cutover.
+- [ ] Check applicable direct access paths against the baseline.
+- [x] Record Newt's container ID and start time, rerun the native deployment,
+  and confirm neither changed unnecessarily. Before the repeat deployment,
+  Newt reported ID
+  `bfc30df8a88a17833bd3947f176267d57652120ce729b393b2eb9fc509aba5c9`
+  and start time `2026-10-31T05:26:08.125898049Z`. The repeat run reported
+  the Newt task `ok`, with `changed=0` and `failed=0`; the post-run inspection
+  reported the same ID and start time.
+- [x] After removing the Newt gate, rerun the combined playbook without
+  `deploy_container` and verify Newt is reconciled without an unnecessary
+  restart or recreation. The reported run included the Newt task as `ok`
+  and recapped `changed=0` and `failed=0`. The post-run inspection reported
+  the same container ID and start time as the preceding baseline.
 - [ ] At an agreed time, verify the normal automation paths do not redeploy
   Newt through Portainer and that blueprint updates still work. Review each
   playbook's other side effects before running it; do not treat a full
