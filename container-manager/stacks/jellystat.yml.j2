@@ -1,18 +1,20 @@
-version: '3.8'
 services:
   jellystat:
-    image: cyfershepard/jellystat:latest
+    env_file:
+      - path: ./db-secrets.env
+        format: raw
+      - path: ./jwt-token.env
+        format: raw
+    image: cyfershepard/jellystat:{{ jellystat_version }}
     container_name: jellystat
     restart: unless-stopped
     ports:
       - '3000:3000'
     environment:
-      - POSTGRES_USER=jellystat
-      - POSTGRES_PASSWORD={{ jellystat_db_password }}
-      - POSTGRES_IP=jellystat-db
-      - POSTGRES_PORT=5432
-      - JWT_SECRET={{ jellystat_jwt_secret }}
-      - TZ={{ timezone }}
+      - POSTGRES_USER=${POSTGRES_USER:?Postgres user not set}
+      - POSTGRES_IP=${POSTGRES_IP:?Postgres IP not set}
+      - POSTGRES_PORT=${POSTGRES_PORT:?Postgres port not set}
+      - TZ=${TZ:?Timezone not set}
     depends_on:
       - jellystat-db
     volumes:
@@ -24,9 +26,11 @@ services:
     shm_size: 256mb
     container_name: jellystat-db
     restart: unless-stopped
+    env_file:
+      - path: ./db-secrets.env
+        format: raw
     environment:
-      - POSTGRES_USER=jellystat
-      - POSTGRES_PASSWORD={{ jellystat_db_password }}
+      - POSTGRES_USER=${POSTGRES_USER:?Postgres user not set}
     volumes:
       - 'jellystat-db:/var/lib/postgresql/data'
     networks:
@@ -36,4 +40,6 @@ networks:
     external: true
 volumes:
   jellystat-db:
+    name: jellystat_jellystat-db
   jellystat-backup-data:
+    name: jellystat_jellystat-backup-data
