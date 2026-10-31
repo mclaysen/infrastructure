@@ -21,9 +21,9 @@ reverse proxy is configured to forward `mclaysen.com` to `192.168.86.202:5001`.
   [`playbooks/process-containers.yml`](playbooks/process-containers.yml), and
   removes the website from the Portainer stack list. These changes have not
   been verified on the host.
-- The native playbook deploys the website unconditionally and deploys
-  Cloudflare only when `start_containers=true`. It is not imported by the
-  normal `container-manager.yml` run, so a regular run will not deploy website
+- The native playbook now deploys the website, Cloudflare, Homebridge,
+  Jellyfin, and Jellystat unconditionally. It is not imported by the normal
+  `container-manager.yml` run, so a regular run will not deploy website
   updates. The preferred ongoing approach is one combined playbook that
   reconciles migrated stacks; document how it will be run.
 - Local `docker compose config` validation succeeded with the environment
@@ -370,12 +370,12 @@ as an example of a site dependent on this tunnel.
 - [ ] Preserve the verified service and container names, hostname, pinned image
   version, command, restart policy, network, logging options, and health-check
   settings. Do not pull a different image during cutover unless intended.
-- [ ] Document the combined playbook's behavior: the website currently deploys
-  on every run, while `start_containers` gates Cloudflare. Rendering both
-  stacks together also makes website deployment dependent on the Cloudflare
-  environment template. For future migrations, keep the new stack's activation
-  gated until cutover. Directory creation no longer recursively changes
-  `/opt/compose` permissions.
+- [ ] Document the combined playbook's behavior: the website, Cloudflare,
+  Homebridge, Jellyfin, and Jellystat currently deploy on every run. Rendering
+  the stacks together makes deployment dependent on all their environment
+  templates. For future migrations, keep the new stack's activation gated
+  until cutover. Directory creation no longer recursively changes `/opt/compose`
+  permissions.
 - [x] Remove Cloudflare from the Portainer deployment list in the working tree,
   so that playbook no longer deploys the modified shared template.
 - [ ] Preserve a working Portainer rollback path: restoring its stack entry
@@ -617,10 +617,12 @@ Both active volumes use the `local` driver and have Compose project label
 `jellyfin-cache`, respectively. Retaining those project and logical names
 should resolve to the existing prefixed names; validate the rendered
 configuration before deployment.
-The native template now explicitly declares both active names as external.
-The combined playbook ensures those volumes exist with `state: present` and
-`recreate: never`. If either volume is missing, Ansible creates it empty:
-restoring existing data is a separate step.
+The working-tree template now declares the exact names as Compose-managed
+volumes, and the separate Ansible volume task has been removed. Local Compose
+configuration validation resolved the expected names; these changes have not
+yet been verified on the host. Compose creates a missing volume empty when the
+stack starts. It can remove Compose-managed volumes with
+`docker compose down --volumes`; do not use that command for this stack.
 Jellyfin publishes `8096/tcp` and `7359/udp` on both IPv4 and IPv6, has
 supplemental group `3004`, and is attached to `pangolin_network`, a local
 bridge network.
@@ -702,21 +704,25 @@ The user confirmed both expected NFSv4 mounts:
 ### 2. Prepare native Compose
 
 - [x] Add Jellyfin to the combined Ansible playbook at
-  `/opt/compose/jellyfin`, with project name `jellyfin` and activation gated
-  until cutover. Existing migrated stacks are reconciled during a combined
-  playbook run.
+  `/opt/compose/jellyfin`, with project name `jellyfin`. Activation was gated
+  during cutover; the working-tree playbook has since removed that gate and
+  now reconciles Jellyfin on every run.
 - [x] Add an empty `.env` template and configure its rendering as `root:root` /
   `0600`. Host-side permissions were verified as `root:root 600`. Supply any
   future container environment variables explicitly; Compose `.env`
   interpolation alone does not inject them into the container.
-- [x] Declare the **exact active volume names** as external and add Ansible
-  volume tasks using `state: present` and `recreate: never`. Local Compose
+- [x] Declare the **exact active volume names** in the template. The original
+  external declarations and Ansible volume task were subsequently replaced in
+  the working tree by Compose-managed volumes. Local Compose configuration
   validation resolves the expected names.
+- [ ] Render and validate the updated Compose-managed volume configuration on
+  the host, then verify the existing volumes and Jellyfin data are preserved
+  after the next Ansible deployment.
 - [x] Confirm the active volumes exist and Jellyfin can use their data. The
   preparation run found both volumes, and the user confirmed Jellyfin and media
-  work after cutover. The volume tasks create missing volumes empty; on a fresh
+  work after cutover, before the latest volume-management change. On a fresh
   install or after data loss, restore existing configuration data before
-  starting Jellyfin.
+  starting Jellyfin; Compose creates missing volumes empty.
 - [ ] Preserve the verified image, `jellyfin` service and container identity,
   `pangolin_network` as an existing external network, supplemental fileshare
   group, `8096/tcp` and `7359/udp` mappings, media mount sources and targets,
@@ -738,7 +744,8 @@ The user confirmed both expected NFSv4 mounts:
   recorded image, mounts, volume names, network, ports, group, and restart
   policy.
 - [x] Add an Ansible guard that checks each Jellyfin mountpoint, expected NFS
-  source, and filesystem type before the gated deployment task.
+  source, and filesystem type before deployment. The guard now runs on every
+  playbook run; a failure also prevents the later Jellystat task from running.
 - [x] Fix and validate the mount guard in Ansible check mode. The read-only
   `findmnt` task now runs in check mode, and both expected mounts passed on
   `container-manager`.
@@ -760,10 +767,10 @@ The user confirmed both expected NFSv4 mounts:
 
 ### 3. Cut over and verify
 
-- [x] Deploy the gated Jellyfin task using the combined **Ansible playbook**.
-  Inspection showed the native Compose file, expected image, volumes and bind
-  mounts; the container subsequently reported healthy. Continue to pass
-  `-e start_containers=true` when Jellyfin should be reconciled.
+- [x] Deploy Jellyfin using the combined **Ansible playbook**. Inspection
+  showed the native Compose file, expected image, volumes and bind mounts;
+  the container subsequently reported healthy. The deployment was gated at
+  that time; the working-tree task no longer uses `start_containers`.
 - [ ] Confirm the Portainer-managed Jellyfin stack was stopped without
   removing volumes or media, and document the full rollback procedure.
 - [x] Confirm the running container uses the native Compose file and the same
@@ -801,6 +808,292 @@ The user confirmed both expected NFSv4 mounts:
   been verified for the installed version. Keep both sets of similarly named
   Jellyfin volumes until their use is understood and a separate cleanup is
   planned.
+
+## Next migration: Jellystat
+
+Migrate only Jellystat to the combined Ansible-managed Compose workflow. The
+[current template](stacks/jellystat.yml.j2) defines an application container
+and a PostgreSQL container, two named volumes, and the external
+`pangolin_network`. The application image now uses `jellystat_version`, and
+PostgreSQL uses `postgres:15.2`. The live image references and network were
+confirmed during the inventory below; the remaining template settings still
+need comparison with live state.
+
+The working-tree playbook now renders the Compose template, a non-secret
+interpolation `.env`, and separate raw PostgreSQL-password and JWT-secret
+files. The conflicting secret interpolation entries have been removed.
+secret validation runs unconditionally before those files are rendered; the
+user chose to retain this fail-fast behavior. Jellystat was gated during
+preparation, but the gate has since been removed from the working-tree
+playbook; Jellystat now reconciles on every run. Do not print resolved
+configuration containing secrets or share container environment variables.
+Preserve the existing secrets during migration.
+
+### 1. Inventory, backup, and baseline
+
+- [ ] Choose a maintenance window and verify Jellystat UI access, existing
+  statistics, and its connection to Jellyfin. Record the baseline without
+  sharing credentials or personal viewing data.
+  The user reports that the UI works through both the external address and
+  direct port 3000, and that Jellystat is connected to Jellyfin. The
+  maintenance window has not yet been confirmed.
+- [x] Record the live Compose identity, image, status, and restart policy for
+  both containers on `container-manager`:
+
+  ```bash
+  docker inspect jellystat jellystat-db \
+    --format 'name={{ .Name }} project={{ index .Config.Labels "com.docker.compose.project" }} service={{ index .Config.Labels "com.docker.compose.service" }} config={{ index .Config.Labels "com.docker.compose.project.config_files" }} image={{ .Config.Image }} image_id={{ .Image }} started={{ .State.StartedAt }} status={{ .State.Status }} health={{ if .State.Health }}{{ .State.Health.Status }}{{ else }}none{{ end }} restart={{ .HostConfig.RestartPolicy.Name }}'
+  ```
+
+  On 2026-10-30, both containers reported project `jellystat`, their respective
+  service names, config `/data/compose/3/docker-compose.yml`, status `running`,
+  and restart policy `unless-stopped`. Jellystat reported `healthy`; PostgreSQL
+  had no Docker health check. Their image references were
+  `cyfershepard/jellystat:latest` and `postgres:15.2`, respectively. Their
+  reported start times were `2026-10-30T03:22:46.134780215Z` and
+  `2026-10-30T03:22:42.961905804Z`, respectively.
+- [x] Record the image IDs and available repository digests, especially for
+  the mutable `latest` tag:
+
+  ```bash
+  for container in jellystat jellystat-db; do
+    docker image inspect \
+      "$(docker inspect --format '{{.Image}}' "$container")" \
+      --format 'image_id={{ .Id }} repo_digests={{ json .RepoDigests }}'
+  done
+  ```
+
+  The reported image IDs and repository digests were:
+
+  | Container | Image ID | Repository digest |
+  | --- | --- | --- |
+  | `jellystat` | `sha256:e61c759ec706da378bc8374e797da1dfd298ab30f804cefd82d192c301a888c7` | `cyfershepard/jellystat@sha256:e61c759ec706da378bc8374e797da1dfd298ab30f804cefd82d192c301a888c7` |
+  | `jellystat-db` | `sha256:78a275d4c891f7b3a33d3f1a78eda9f1d744954d9e20122bfdc97cdda25cddaf` | `postgres@sha256:78a275d4c891f7b3a33d3f1a78eda9f1d744954d9e20122bfdc97cdda25cddaf` |
+
+- [x] Identify the actual volume names and mount destinations. In particular,
+  preserve the live PostgreSQL data volume and Jellystat backup-data volume;
+  do not assume their Docker names from the template.
+
+  ```bash
+  docker inspect jellystat jellystat-db \
+    --format '{{ .Name }}{{ "\n" }}{{ range .Mounts }}type={{ .Type }} name={{ .Name }} source={{ .Source }} destination={{ .Destination }} rw={{ .RW }}{{ "\n" }}{{ end }}'
+  ```
+
+  Inspect each discovered volume with `docker volume inspect <volume-name>`
+  and record its driver and metadata. Do not remove any volumes.
+  `jellystat_jellystat-backup-data` mounts read-write at
+  `/app/backend/backup-data`; `jellystat_jellystat-db` mounts read-write at
+  `/var/lib/postgresql/data`. Both use the local driver and scope, have no
+  custom driver options, and have Compose labels for project `jellystat`.
+  Both paths reside on `/dev/vda4`.
+- [x] Record published ports and network membership:
+
+  ```bash
+  docker port jellystat
+  docker port jellystat-db
+  docker inspect jellystat jellystat-db \
+    --format '{{ .Name }}{{ range $name, $_ := .NetworkSettings.Networks }} network={{ $name }}{{ end }}'
+  docker network inspect pangolin_network \
+    --format 'name={{ .Name }} driver={{ .Driver }} scope={{ .Scope }}'
+  ```
+
+  Jellystat publishes TCP port 3000 on all IPv4 and IPv6 interfaces;
+  PostgreSQL has no published host port. Both containers use
+  `pangolin_network`, a local bridge network.
+- [x] Save the Portainer stack definition and deployment settings securely.
+  The user confirmed these are saved.
+- [x] Confirm any referenced environment files and secrets required for
+  recovery are available securely. The user confirmed the saved definition
+  and required files and secrets are accessible. This does not verify that
+  rollback works or that the old Compose interpolation supplies the current
+  database password. Do not share credentials.
+- [x] Record the backup decision. The user declined a separate Jellystat
+  backup. A 2026-10-30 container-manager VM backup was reported successful;
+  its recovery has not been tested, and PostgreSQL was running during the
+  backup. Do not treat it as a verified database-consistent backup; data may
+  be unrecoverable. The user accepted this recovery risk and chose to
+  continue. A read-only database inventory listed `postgres`, `jellystat`, and
+  `jfstat`; the backup-data volume reported zero disk usage. Preserve both
+  existing volumes.
+
+### 2. Prepare native Compose
+
+- [x] Add Jellystat preparation and a gated deployment to the combined
+  playbook using the observed Compose project name. A preparation run rendered
+  the Jellystat Compose file, completed the environment-file task, and skipped
+  Jellystat deployment. The play recap reported zero failures; the other stack
+  deployment tasks reported `ok`. The gate was subsequently removed, so
+  Jellystat now reconciles on every run. Secret validation also runs on every
+  run.
+- [x] Preserve the observed PostgreSQL and Jellystat images and data; avoid a
+  PostgreSQL major-version upgrade during migration. Decide how to pin the
+  Jellystat image so the mutable `latest` tag does not unexpectedly change it.
+  The working tree sets `jellystat_version` to `1.1.12` plus the recorded
+  digest; host Compose configuration reports that reference and
+  `postgres:15.2`. Local image inspection on the host resolved both references
+  to the original image IDs. After cutover, both image IDs and the database
+  inventory matched, and the user confirmed the expected statistics remain.
+- [x] Preserve the observed volume names, network, ports, restart policies,
+  PostgreSQL settings, database password, JWT secret, and Jellyfin connection.
+  The reported native containers use the recorded volumes, network, ports, and
+  restart policies; the database accepts the configured password and the user
+  confirmed the Jellyfin connection. The JWT secret matches the staged file.
+  Compose creates missing volumes empty: restore existing data before starting
+  services on a rebuilt host. Do not use `docker compose down --volumes`.
+- [x] Remove the conflicting secret interpolation entries and pass secrets
+  through raw service env files. Local Compose configuration tests using
+  synthetic values confirmed that dollar signs, quotes, backslashes, hashes,
+  equals signs, and surrounding spaces were preserved, even when conflicting
+  secret variables were present in the shell. The database received the
+  password but not the JWT secret. These tests did not start containers or
+  verify the actual secrets.
+- [x] Validate that the secret values are nonempty and contain no line breaks
+  before rendering the raw files. The assertion uses `no_log: true`, rejects
+  invalid values in local synthetic tests, and passed for both secrets during
+  the reported host run before the environment-file task.
+- [x] Decide how Jellystat secret validation affects other stacks. The user
+  chose to retain the current fail-fast behavior: validation runs even when
+  Jellystat deployment is disabled, and failure stops the playbook before the
+  other stack deployment tasks.
+- [x] Verify the actual secrets match the live stack and the resolved Compose
+  configuration without printing them before cutover. The user confirmed the
+  staged password and JWT secret matched the then-running stack. A host-side
+  comparison confirmed both services received the staged database password,
+  Jellystat received the staged JWT secret, and PostgreSQL did not receive
+  the JWT secret in the resolved configuration. The playbook configures the
+  files as `root:root` / `0600` with `no_log: true`; the host reported
+  `root:root 600` for `.env`, `db-secrets.env`, and `jwt-token.env`.
+- [x] Recheck the staged and container secret settings after the subsequent
+  Vault password change without printing values. Both containers' password
+  settings and Jellystat's JWT secret matched the staged files, PostgreSQL
+  did not receive the JWT secret, and TCP authentication succeeded.
+- [x] Confirm the host's Docker Compose version supports `env_file` with
+  `format: raw` (Compose 2.30 or later). Both the `ansible` user and `sudo`
+  reported Docker Compose `v5.4.0`.
+- [x] Validate the staged host configuration with the intended project name
+  using `docker compose config --quiet`; compare the image references, volume
+  names and destinations, restart policies, published ports, and network with
+  the live inventory without exposing credentials. The host command exited
+  successfully with an obsolete `version` warning, and the reported settings
+  matched the recorded inventory.
+- [x] Confirm the staged non-secret database and timezone settings against
+  the live stack without sharing credentials or personal data. The reported
+  PostgreSQL user, host, port, and timezone matched the staged configuration.
+- [ ] Document an Ansible-based rollback procedure and disable Jellystat in
+  Portainer deployment automation at cutover. Retain the old stack record and
+  saved definition; do not delete the stack or volumes. Jellystat has already
+  been removed from the Portainer deployment list in the working tree. Native
+  containers are now present; initial authentication failed, but the
+  application later reported healthy and the user confirmed the expected data.
+
+### 3. Cut over and verify
+
+**Authentication incident (service restored):** On 2026-10-30, both
+containers reported the native Compose configuration and the previously
+recorded image IDs and volume names.
+PostgreSQL was running, but Jellystat was restarting after PostgreSQL rejected
+authentication for `jellystat`. Investigate without printing secrets, changing
+the database password, or removing volumes. The user reports manually stopping
+the old stack in the Portainer UI and then running the combined Ansible
+playbook directly; the precise container takeover behavior was not verified.
+A read-only connection attempt
+using the PostgreSQL container's configured password failed authentication;
+the user reported that manually entering the password from the staged
+`db-secrets.env` at a prompt succeeded. A secret-safe comparison reported that
+the application and database container password settings both match that
+file. A subsequent prompt-based test against the same `jellystat-db` TCP
+endpoint also failed authentication; the endpoint used for the earlier
+successful test has not yet been confirmed. A local Unix-socket query as
+`jellystat` succeeded without an interactive prompt; its authentication rule
+uses `trust`. The reported rules also trust loopback connections but require
+`scram-sha-256` for other TCP clients. The `jellystat` role can log in and has
+no expiry; its verifier and the server's `password_encryption` setting both
+use SCRAM-SHA-256. Do not treat successful socket or loopback access as proof
+that the password works over the Docker network. The reason the staged
+password differs from the credential accepted by the database remains
+unconfirmed; the earlier Portainer template used direct Compose
+interpolation, while the native template uses raw env files. The user reports
+that the old password contained `$`, making interpolation a possible cause;
+the previously effective value has not been independently recovered or
+verified. The user authorized a role-password reset but did not complete it;
+instead, they changed the password in Vault and reran Ansible. After that run,
+the user reported Jellystat running and healthy, PostgreSQL running, zero
+container restarts, and a successful TCP query using the database container's
+configured password. Follow-up inspection reported the original image IDs,
+volume names and volume creation timestamps. The database list and reported
+sizes also matched the earlier inventory. The user subsequently confirmed
+that the expected statistics are present and Jellyfin is connected.
+
+On 2026-10-31, the user chose to defer the remaining operational checks,
+including the Portainer automation rerun, rollback procedure preparation, and
+planned restart test.
+
+- [ ] Confirm acceptance of the risk of unverified data recovery, document
+  rollback readiness and the Portainer cutover sequence, and preserve the
+  active volumes and network. The user accepted the recovery risk; rollback
+  readiness remains to be documented. The user manually stopped the old stack
+  in the Portainer UI and then ran the combined Ansible playbook directly.
+- [x] Reconcile Jellystat through the combined Ansible playbook alongside
+  existing migrated stacks. A subsequent run reported the Jellystat task
+  `ok` and a recap of `changed=0` and `failed=0`.
+- [x] Inspect both containers to confirm native Compose labels, expected
+  images, mounts, network, ports, and restart policies. Confirm PostgreSQL is
+  ready and Jellystat connects to it. The reported post-recovery inspections,
+  TCP query, and UI verification passed.
+- [x] Verify the UI, existing statistics, and Jellyfin connection against the
+  baseline. The user confirmed the expected statistics are present and
+  Jellyfin is connected after recovery.
+- [x] Check logs carefully without exposing credentials or personal data.
+  The reported recent logs show PostgreSQL ready, Jellystat listening, and its
+  Jellyfin WebSocket connected. PostgreSQL logged `database "jfstat" already
+  exists` for `CREATE DATABASE jfstat` at startup; Jellystat reported that the
+  database exists and continued starting. No authentication failures were
+  reported in these recent logs.
+- [x] Rerun native deployment and compare container IDs and start times to
+  check for unnecessary recreation. The repeat run reported Jellystat `ok`
+  and `changed=0`; both IDs and start times were unchanged.
+  Jellystat reported ID
+  `ff3be1f898a744f8eb74885d8cbc49a1ca7178b774d0d940385c3bc056f8985c`
+  and start time `2026-10-31T04:03:55.680074084Z`; PostgreSQL reported ID
+  `898e9c1ecb2f5e40e2616b71c0cfe1d0c4929dd3944fa6d72ddcad9d56f9be20`
+  and start time `2026-10-31T04:03:55.26042178Z`.
+- [ ] Verify Portainer automation does not reclaim the stack and the other
+  migrated services remain healthy. Jellystat is absent from the Portainer
+  stack list in the working tree, but running the Portainer playbook can pull
+  images or reconcile other stacks and may restart Docker if its daemon
+  configuration changes. Schedule that test accordingly. A read-only
+  container-status check reported the website, Cloudflare tunnel, Homebridge,
+  and Jellyfin running; the tunnel and Jellyfin reported healthy. This did not
+  verify the other services' functionality or a Portainer automation rerun.
+- [ ] Observe Jellystat and test recovery after a planned host or Docker restart
+  when practical.
+
+### 4. Rollback and cleanup
+
+Rollback is not yet a tested procedure. Before attempting it:
+
+- Prevent native Ansible reconciliation and Portainer automation from
+  competing for the Jellystat project. Confirm how the existing containers
+  will be handed over without removing either volume or the shared network.
+- Do not simply restore the old Portainer deployment-list entry: it points to
+  `jellystat.yml.j2`, which is now the native template and references separate
+  host-local secret files. The former template interpolated secrets directly
+  and used the mutable `latest` image; the former Portainer entry enabled
+  image pulls and pruning.
+- Prepare an Ansible-based Portainer deployment using a reviewed definition,
+  the intended image, and recovery secrets. Verify that the effective database
+  password matches the existing PostgreSQL role and that Compose interpolation
+  preserves all secret values. Setting `POSTGRES_PASSWORD` does not change
+  the password of a role in an existing PostgreSQL data directory.
+- Review the scope and side effects of the Portainer playbook before running
+  it. Preserve the existing Portainer record, both named volumes, and
+  `pangolin_network`; never use `docker compose down --volumes`.
+
+- [ ] If verification fails, prepare and review a rollback procedure before
+  using it, then verify the UI and existing statistics. Preserve the existing
+  database and backup volumes; restore a backup only if recovery requires it.
+- [ ] Retain the Portainer stack record until record-only removal is known to
+  be safe. Do not remove or prune volumes as part of this migration.
 
 ## Later migrations
 
