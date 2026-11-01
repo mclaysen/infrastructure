@@ -1,13 +1,14 @@
 services:
   protonmail-bridge:
-    image: dancwilliams/protonmail-bridge:v3.25.0@sha256:32c44aaa56c168ec796c72a59159c1db0f55b8ba920a20e00c0e4ee129845134
+    image: dancwilliams/protonmail-bridge:{{ protonmail_bridge_version }}
     networks:
       - protonmail-network
     restart: unless-stopped
     volumes:
       - protonmail:/root
-    environment:
-      - KEYRING_PASSPHRASE=${PROTONMAIL_KEYRING_PASSPHRASE}
+    env_file:
+      - path: ./secret.env
+        format: raw
 
 volumes:
   protonmail:

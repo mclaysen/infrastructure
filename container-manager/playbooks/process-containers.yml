@@ -21,6 +21,7 @@
         - /opt/compose/jellyfin
         - /opt/compose/jellystat
         - /opt/compose/newt
+        - /opt/compose/protonmail_bridge
 
     - name: Create compose files
       ansible.builtin.template:
@@ -34,6 +35,7 @@
         - {src: ../stacks/jellyfin.yml.j2, dest: /opt/compose/jellyfin/compose.yml }
         - {src: ../stacks/jellystat.yml.j2, dest: /opt/compose/jellystat/compose.yml }
         - {src: ../stacks/newt.yml.j2, dest: /opt/compose/newt/compose.yml }
+        - {src: ../stacks/proton_mail_bridge.yml.j2, dest: /opt/compose/protonmail_bridge/compose.yml }
 
     - name: Validate required secrets
       ansible.builtin.assert:
@@ -42,12 +44,13 @@
           - item.value | length > 0
           - '"\n" not in item.value'
           - '"\r" not in item.value'
-        fail_msg: Jellystat secrets must be nonempty, single-line strings.
+        fail_msg: Stack secrets must be nonempty, single-line strings.
       loop:
         - value: "{{ jellystat_db_password }}"
         - value: "{{ jellystat_jwt_secret }}"
         - value: "{{ newt_id }}"
         - value: "{{ newt_secret }}"
+        - value: "{{ PROTONMAIL_KEYRING_PASSPHRASE }}"
       no_log: true
 
     - name: Create environment files
@@ -69,6 +72,8 @@
         - {src: ../stacks/newt.env.j2, dest: /opt/compose/newt/.env }
         - {src: ../stacks/newt.newt-id.env.j2, dest: /opt/compose/newt/id.env }
         - {src: ../stacks/newt.newt-secret.env.j2, dest: /opt/compose/newt/secret.env }
+        - {src: ../stacks/protonmail_bridge.env.j2, dest: /opt/compose/protonmail_bridge/.env }
+        - {src: ../stacks/protonmail_bridge.secret.env.j2, dest: /opt/compose/protonmail_bridge/secret.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -97,6 +102,11 @@
     - name: Create pangolin network
       community.docker.docker_network:
         name: pangolin_network
+        state: present
+
+    - name: Create protonmail network
+      community.docker.docker_network:
+        name: protonmail-network
         state: present
 
     - name: Inspect Jellyfin media mounts
@@ -150,3 +160,9 @@
         project_src: /opt/compose/newt
         remove_orphans: true
         project_name: newt
+
+    - name: Deploy Proton Mail Bridge container
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/protonmail_bridge
+        remove_orphans: true
+        project_name: protonmail_bridge

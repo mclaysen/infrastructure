@@ -129,6 +129,9 @@ dawarich_restic_password_file: /etc/restic/dawarich_password
 dawarich_restic_path: "{{ dawarich_backup_mount_point }}/restic-repo"
 dawarich_backup_script_path: /usr/local/bin/dawarich-backup.sh
 
+#mail bridge
+protonmail_bridge_version: v3.25.0@sha256:32c44aaa56c168ec796c72a59159c1db0f55b8ba920a20e00c0e4ee129845134
+
 #email settings
 email_domain: protonmail-bridge
 email_port: 25
