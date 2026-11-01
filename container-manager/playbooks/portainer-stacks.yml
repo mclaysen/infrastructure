@@ -239,32 +239,6 @@
       become: false
       run_once: true
 
-    - name: Create network for Pangolin
-      bgtor.portainer.portainer_network:
-        portainer_url: "{{ portainer_url }}"
-        portainer_token: "{{ portainer_token }}"
-        name: pangolin_network
-        driver: bridge
-        endpoint_id: "{{ endpoint_id }}"
-        state: present
-        internal: false
-      delegate_to: localhost
-      become: false
-      run_once: true
-
-    - name: Create network for Protonmail
-      bgtor.portainer.portainer_network:
-        portainer_url: "{{ portainer_url }}"
-        portainer_token: "{{ portainer_token }}"
-        name: protonmail-network
-        driver: bridge
-        endpoint_id: "{{ endpoint_id }}"
-        state: present
-        internal: false
-      delegate_to: localhost
-      become: false
-      run_once: true
-
     - name: Create network for monitoring
       bgtor.portainer.portainer_network:
         portainer_url: "{{ portainer_url }}"
