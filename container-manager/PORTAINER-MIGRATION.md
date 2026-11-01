@@ -1339,6 +1339,180 @@ selected sites work externally.
   Docker restart. Keep the Portainer stack record until record-only removal is
   known to be safe.
 
+## Next migration: Proton Mail Bridge
+
+Migrate only Proton Mail Bridge to the combined Ansible-managed Compose
+workflow. The current [template](stacks/proton_mail_bridge.yml.j2) defines one
+service, an explicitly named `protonmail` volume mounted at `/root`, the
+external `protonmail-network`, and a keyring passphrase supplied through
+Portainer. The image reference is digest-pinned in the working tree; compare
+all settings with the live container rather than assuming they match.
+
+The shared network is also used by Immich, Ghost, and Dawarich templates.
+Those services may depend on the bridge for mail delivery. Preserve the
+bridge's working DNS name and aliases as well as the network; do not assume
+that a running container proves SMTP authentication or delivery works.
+Do not print secrets, message contents, or resolved secret-bearing Compose
+configuration.
+
+### 1. Inventory, recovery, and baseline
+
+- [ ] Choose a maintenance window. Mail delivery may be interrupted during
+  the bridge cutover. The user approved starting cutover now.
+- [x] Record a representative mail-delivery baseline. The user confirmed
+  that the Ghost blog had recently sent a successfully delivered email and
+  chose Ghost as the representative application for migration verification.
+  Other applications' mail delivery has not been verified. Do not send test
+  messages without agreement.
+- [x] Identify the actual container name and record its Compose project,
+  service, configuration path, image, image ID, start time, status, health,
+  and restart policy. Record available image digests and compare them with
+  the pinned template. The user reported container
+  `protonmail_bridge-protonmail-bridge-1` under project `protonmail_bridge`,
+  with service `protonmail-bridge` and config
+  `/data/compose/9/docker-compose.yml`. Inspection reported image
+  `dancwilliams/protonmail-bridge:v3.25.0@sha256:32c44aaa56c168ec796c72a59159c1db0f55b8ba920a20e00c0e4ee129845134`,
+  image ID
+  `sha256:32c44aaa56c168ec796c72a59159c1db0f55b8ba920a20e00c0e4ee129845134`,
+  start time `2026-10-30T03:24:16.733586874Z`, status `running`, health
+  `healthy`, and restart policy `unless-stopped`. The image reference matches
+  the working-tree pinned template and variables. Image inspection reported
+  the same digest for both the tagged and untagged repository references:
+  `dancwilliams/protonmail-bridge@sha256:32c44aaa56c168ec796c72a59159c1db0f55b8ba920a20e00c0e4ee129845134`.
+- [x] Record all live mount sources, destinations, and access modes. Inspect
+  the actual volume name and metadata without exposing its contents; preserve
+  its identity, driver, and existing data. The live container mounts volume
+  `protonmail` from `/var/lib/docker/volumes/protonmail/_data` at `/root`
+  read-write. Volume inspection reported local driver and scope, creation time
+  `2026-07-24T21:00:20-04:00`, Compose project `protonmail_bridge`, and no
+  driver options.
+- [x] Record the network name, ID, container aliases, and published ports,
+  and verify the bridge's SMTP hostname and port used by Ghost without
+  exposing credentials. The live container is attached to
+  `protonmail-network`, with aliases
+  `protonmail_bridge-protonmail-bridge-1` and `protonmail-bridge`; no
+  published ports were reported. Network inspection reported ID
+  `d9a162b856038177a7d46fb88a8881161056279298092e05ae60a114eb126d1e`,
+  driver `bridge`, and scope `local`. The Ghost service container was
+  identified as `ghost-ghost-1` and reported running. Its configured SMTP
+  host is `protonmail-bridge`, its port is `25`, and it is attached to both
+  `ghost_network` and `protonmail-network`.
+- [x] Compare relevant non-secret bridge settings with the staged native
+  configuration. The staged file specifies the recorded image, service
+  name, restart policy, `protonmail` volume at `/root`, external
+  `protonmail-network`, and no published ports. The native container's actual
+  aliases and mounts still need verification after cutover.
+- [x] Save the Portainer definition, deployment settings, keyring passphrase,
+  and other required recovery materials securely. Verify availability without
+  sharing their values. The user confirmed these materials are saved and
+  accessible; rollback and rebuilding the volume have not been tested.
+- [x] Record the backup and recovery decision. The user is not concerned
+  about a backup and expects the volume could be rebuilt if needed, rather
+  than relying on a verified backup. The rebuild procedure has not been
+  verified. Do not remove, overwrite, or prune the existing volume.
+
+### 2. Prepare native Compose
+
+- [x] Add staged preparation to the combined Ansible playbook and gate bridge
+  activation until cutover. The working tree updates the existing bridge
+  template for native Compose and initially gated the deployment task with
+  `deploy_protonmail_bridge`, defaulting to false. After cutover, the user
+  removed the gate for unconditional reconciliation. The user chose to rely
+  on Git for recovery rather than keep conditional Portainer support in the
+  template.
+- [x] Preserve the effective keyring passphrase without printing it. Account
+  for Compose interpolation and special characters; use secure `root:root`
+  / `0600` environment files and `no_log: true`. Validate secrets and compare
+  effective values safely before the old container is stopped. The working
+  tree uses a separate raw secret file and validates the passphrase as a
+  nonempty, single-line string without logging it. The user chose fail-fast
+  behavior: an invalid passphrase stops the combined playbook before any
+  stack deployment, including when bridge deployment was gated. The host reported
+  `.env` and `secret.env` owned by `root:root` with mode `0600`. A secret-safe
+  comparison reported that the staged raw passphrase matches the running
+  container's effective setting.
+- [ ] Prepare the existing external network and volume without replacing or
+  removing shared resources. Decide explicitly how the volume is managed;
+  avoid any command that removes volumes or the shared network. The user
+  chose a Compose-managed volume with the existing explicit `protonmail`
+  name, which the new native template specifies. Never use
+  `docker compose down --volumes`; it can remove this volume. Host validation
+  remains open. After the preparation run, `protonmail-network` reported the
+  same ID as before the run; endpoint membership has not been rechecked.
+- [x] Remove the bridge from the Portainer deployment list in the working tree
+  so that playbook does not redeploy the native-only template through
+  Portainer. The existing Portainer-managed container and stack record are
+  unchanged; the Portainer playbook has not been rerun.
+- [ ] Document an Ansible-based rollback procedure before cutover. The user
+  plans to rely on Git to recover the prior configuration; Git alone does not
+  restore credentials, volume contents, or a working deployment. Preserve the
+  old stack record, image, volume, network, and effective credentials. Record
+  whether rollback has actually been tested. The user chose to proceed with
+  the recovery path untested; a reviewed rollback procedure remains open.
+- [ ] Validate Ansible syntax and staged Compose configuration without
+  exposing secrets. Compare the rendered non-secret settings and effective
+  secret with the live baseline. Confirm the preparation run does not
+  restart or recreate the bridge and understand its effects on other stacks.
+  Local Ansible syntax validation passed. A synthetic Compose configuration
+  check confirmed the expected image, named volume, external network, restart
+  policy, and canonical raw-secret escaping; a missing secret file failed
+  validation. These checks do not prove the real credentials match or that a
+  container can connect. Before host preparation, the bridge reported ID
+  `ed40615287f48ee87bd51c7f40d5b37e4124aa67f6f8f76c835c453fdb580d98`,
+  start time `2026-10-30T03:24:16.733586874Z`, and status `running`. The
+  host preparation run passed secret validation, reported the Proton network
+  task `ok`, skipped bridge deployment, and recapped `changed=3`,
+  `failed=0`, and `skipped=1`. The bridge's post-run container ID, start
+  time, and running status were unchanged; the shared network ID also matched
+  the baseline. The staged `docker compose config --quiet` command succeeded.
+  The staged passphrase matched the running container in a secret-safe
+  comparison, and the reported staged non-secret settings matched the live
+  baseline. The network endpoint membership and Ghost mail delivery after
+  preparation have not been rechecked.
+
+### 3. Cut over and verify
+
+The user accepted the migration after the successful Ghost delivery and
+ungated idempotency checks. The unchecked recovery and Portainer-automation
+checks below remain open.
+
+- [x] During the agreed window, stop the Portainer-managed bridge and deploy
+  the native project through Ansible using the agreed handoff procedure.
+  Retain the Portainer stack record, persistent volume, and shared network.
+  After the user stopped the stack, no containers were reported for project
+  `protonmail_bridge`. The `protonmail` volume retained its recorded
+  creation time, and `protonmail-network` retained its recorded ID. The
+  subsequent Ansible run reported the bridge deployment `changed`, with a
+  recap of `changed=1` and `failed=0`.
+- [x] Verify native Compose labels, image ID, volume, network and aliases,
+  ports, restart policy, container status, and logs against the baseline.
+  Inspection reported the expected project and service, native config path
+  `/opt/compose/protonmail_bridge/compose.yml`, baseline image reference and
+  ID, `protonmail` mounted at `/root`, `protonmail-network` with both expected
+  aliases, and restart policy `unless-stopped`. The container was running and
+  healthy with zero restarts. No published ports were reported; the volume
+  creation time and network ID matched the baseline. The new container ID is
+  `91a17399a2177889767be321abc31097fc4bc054b08c312b3830028af7e2f740`, with
+  start time `2026-11-01T03:29:41.384486602Z`. The user reviewed logs: sync
+  completed, with a warning that test credentials could not be added through
+  the D-Bus keychain helper because `dbus-launch` was unavailable. Ghost's
+  subsequent test email was delivered despite the warning.
+- [x] Confirm Ghost can resolve the bridge and complete end-to-end mail
+  delivery, as agreed for the baseline. This does not verify other
+  applications' mail delivery. Do not expose credentials or message contents.
+  The user confirmed receipt of a test email after cutover.
+- [x] Rerun the native deployment and compare container ID and start time for
+  idempotency. After the user removed the activation gate, the ungated run
+  reported the bridge task `ok` and recapped `changed=0` and `failed=0`.
+  The subsequent container inspection reported the same ID and start time,
+  with status `running`, health `healthy`, and zero restarts.
+- [ ] At an agreed time, verify Portainer automation does not reclaim the
+  bridge and other services remain healthy. Review the playbook's other
+  effects before running it.
+- [ ] Observe the bridge and test recovery after a planned host or Docker
+  restart when practical. Keep the old stack record until its safe removal
+  is understood.
+
 ## Later migrations
 
 Use the website pilot's lessons to plan the other stacks separately. Stateful
