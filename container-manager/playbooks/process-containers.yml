@@ -22,6 +22,7 @@
         - /opt/compose/jellystat
         - /opt/compose/newt
         - /opt/compose/protonmail_bridge
+        - /opt/compose/ghost
 
     - name: Create compose files
       ansible.builtin.template:
@@ -36,6 +37,7 @@
         - {src: ../stacks/jellystat.yml.j2, dest: /opt/compose/jellystat/compose.yml }
         - {src: ../stacks/newt.yml.j2, dest: /opt/compose/newt/compose.yml }
         - {src: ../stacks/proton_mail_bridge.yml.j2, dest: /opt/compose/protonmail_bridge/compose.yml }
+        - {src: ../stacks/ghost.yml.j2, dest: /opt/compose/ghost/compose.yml }
 
     - name: Validate required secrets
       ansible.builtin.assert:
@@ -51,6 +53,9 @@
         - value: "{{ newt_id }}"
         - value: "{{ newt_secret }}"
         - value: "{{ PROTONMAIL_KEYRING_PASSPHRASE }}"
+        - value: "{{ ghost_database_password }}"
+        - value: "{{ ghost_database_root_password }}"
+        - value: "{{ email_password }}"
       no_log: true
 
     - name: Create environment files
@@ -74,6 +79,11 @@
         - {src: ../stacks/newt.newt-secret.env.j2, dest: /opt/compose/newt/secret.env }
         - {src: ../stacks/protonmail_bridge.env.j2, dest: /opt/compose/protonmail_bridge/.env }
         - {src: ../stacks/protonmail_bridge.secret.env.j2, dest: /opt/compose/protonmail_bridge/secret.env }
+        - {src: ../stacks/ghost.env.j2, dest: /opt/compose/ghost/.env }
+        - {src: ../stacks/ghost.ghost-db-pass.env.j2, dest: /opt/compose/ghost/ghost-db-pass.env }
+        - {src: ../stacks/ghost.db-pass.env.j2, dest: /opt/compose/ghost/db-pass.env }
+        - {src: ../stacks/ghost.db-root-pass.env.j2, dest: /opt/compose/ghost/db-root-pass.env }
+        - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -107,6 +117,11 @@
     - name: Create protonmail network
       community.docker.docker_network:
         name: protonmail-network
+        state: present
+
+    - name: Create ghost network
+      community.docker.docker_network:
+        name: ghost_network
         state: present
 
     - name: Inspect Jellyfin media mounts
@@ -166,3 +181,31 @@
         project_src: /opt/compose/protonmail_bridge
         remove_orphans: true
         project_name: protonmail_bridge
+
+    - name: Inspect existing Ghost data directories
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: true
+      loop:
+        - "{{ ghost_upload_path }}"
+        - "{{ ghost_mysql_data_path }}"
+        - "{{ ghost_mysql_data_path }}/mysql"
+      register: ghost_data_directories
+
+    - name: Require existing Ghost content and initialized MySQL data
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir | default(false)
+        fail_msg: >-
+          {{ item.item }} is missing or is not a directory. Verify the
+          existing Ghost mounts before deploying.
+      loop: "{{ ghost_data_directories.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Deploy Ghost containers
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/ghost
+        remove_orphans: true
+        project_name: ghost
