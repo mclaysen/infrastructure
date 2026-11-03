@@ -11,5 +11,5 @@
     name: VM backup
     user: "{{ deploy_user_name }}"
     job: /usr/local/bin/backup_vm.sh
-    minute: "0"
-    hour: "2"
+    minute: "30"
+    hour: "0"
