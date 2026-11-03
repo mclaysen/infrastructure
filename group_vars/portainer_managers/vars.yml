@@ -109,6 +109,8 @@ immich_restic_path: "{{ immich_backup_mount_point }}/restic-repo"
 immich_backup_script_path: /usr/local/bin/immich-backup.sh
 
 #ghost
+ghost_version: 6.54.0-alpine@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a
+ghost_mysql_version: 8.0.44@sha256:f37951fc3753a6a22d6c7bf6978c5e5fefcf6f31814d98c582524f98eae52b21
 ghost_upload_path: /home/{{ username }}/docker/ghost/content
 ghost_mysql_data_path: /home/{{ username }}/docker/ghost/mysql
 ghost_admin_domain: ghost.mclaysen.com
