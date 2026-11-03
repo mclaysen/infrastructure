@@ -1513,6 +1513,305 @@ checks below remain open.
   restart when practical. Keep the old stack record until its safe removal
   is understood.
 
+## Next migration: Ghost
+
+Migrate Ghost and its MySQL database from Portainer to the combined
+Ansible-managed Compose workflow. This is a stateful migration: preserve the
+existing content and database, the shared mail network, and the current image
+versions. Preparation is not authorization to stop or replace the live stack.
+
+### Current preparation
+
+- The user had already added `/opt/compose/ghost` and the Ghost Compose and
+  environment templates to the combined playbook, pinned the Ghost and MySQL
+  image references in the variables, changed `ghost_network` to external, and
+  added its network task. The user's changes also split the passwords into
+  raw environment files; the service-specific environment names still needed
+  correction. No native Ghost deployment task was present.
+- The preparation now uses separate raw files for the Ghost database password,
+  MySQL user password, MySQL root password, and Ghost mail password. The files
+  and interpolation `.env` are rendered as `root:root` with mode `0600`;
+  passwords are checked for nonempty single-line values with `no_log: true`.
+  This validation is unconditional and can stop the combined playbook before
+  it deploys any stack.
+- Native Ghost deployment is gated by `deploy_ghost`, which defaults to false.
+  When enabled, it checks that the content directory, MySQL data directory,
+  and MySQL system directory already exist before deploying. These checks do
+  not prove that the paths contain the correct or recoverable data.
+- The user chose to remove Ghost from the Portainer Ansible stack list now,
+  while retaining the existing Portainer stack and containers. This is a
+  working-tree change only; it does not stop or remove the live stack.
+  The native-only template must not be deployed through the old Portainer
+  definition. Preserve the old definition and credentials securely for
+  recovery.
+- The user reports having a full VM backup and is not very concerned about
+  the amount of Ghost content. The backup's database consistency and a
+  successful restore have not been verified.
+- The user confirmed that the public blog and admin login work and that the
+  current Portainer definition and required credentials are saved securely.
+- The user approved proceeding with cutover despite the untested VM backup
+  and rollback, and agreed to test email before and after cutover. The
+  user confirmed that the pre-cutover test email was delivered.
+- The user prefers stopping the existing containers through Portainer.
+  Stop Ghost first and MySQL second using the containers' Stop actions;
+  retain the stack record, data, and networks. Verify the stopped state
+  and network identities before native deployment.
+- **Cutover in progress:** After the user's Portainer stop action on
+  2026-11-02, no Ghost project containers were listed and `ghost_network`
+  no longer existed. The exact Portainer action and removal behavior have not
+  been confirmed. The shared `protonmail-network` retained its ID and other
+  application endpoints. Read-only inspection confirmed that the Ghost
+  content, MySQL data, and MySQL system directories still exist and that both
+  pinned images remain available. This does not verify data integrity.
+  The combined playbook recreated `ghost_network` and deployed Ghost with
+  `deploy_ghost=true`; its recap was `ok=21`, `changed=2`, `failed=0`.
+  The new network ID is
+  `bde1915e01200ee110d9209c719424e1fc5df3b54d4266ed6c76baa3047fd76c`,
+  different from the original as expected.
+- Post-cutover inspection found both containers running under project `ghost`
+  and `/opt/compose/ghost/compose.yml`, with the original pinned image IDs,
+  bind mounts, ports, network aliases, and restart policies. MySQL was healthy,
+  and both containers had zero restarts. The shared Proton Mail network kept
+  its original ID and application endpoints. New container IDs are
+  `a9a5f1759a12222a345eeaef8ff6cbbc099f4cde321d3dc237056a97c8c3c80a`
+  for Ghost and
+  `d8c027a8043522492a38f653a6592ab98caadfa368d5b18f13bb1f5d389df143`
+  for MySQL.
+- Initial local and public HTTP checks returned 503 while the new containers
+  were starting. A later check returned HTTP 200 from Ghost inside the
+  container, from its published local port, and from the public blog; the
+  reason for the transient 503 is not confirmed. Recent MySQL logs contained
+  a readiness marker and no error or access-denied markers. An HTTP 200 does
+  not verify login, content, or mail delivery.
+- The user confirmed that the public blog loads with expected content, but
+  reported that Ghost said the post-cutover test email was sent but it did
+  not arrive. Ghost and Proton Mail Bridge were running with zero
+  restarts, the bridge was healthy, and a TCP connection from Ghost to
+  `protonmail-bridge:25` succeeded. The running Ghost mail password matched
+  the staged raw file without printing it. A limited scan of recent logs
+  found no common SMTP authentication, connection, TLS, or send-error
+  markers. A subsequent Nodemailer verification using Ghost's running mail
+  settings authenticated successfully without sending a message. This does
+  not establish that the test email was accepted or delivered.
+- The missing message was a welcome-email test. Inspection of the installed
+  Ghost version showed that this test uses `GhostMailer` and the configured
+  SMTP transport, not the bulk-newsletter delivery path. Three test requests
+  returned HTTP 204, and Proton Mail Bridge logged SMTP message-sent events
+  at the corresponding times on 2026-11-03: 03:20:50, 03:21:14, and
+  03:23:30 UTC. The user identified a duplicate-message warning, and the
+  bridge logs confirm duplicate suppression at all three times. The 204
+  responses and message-sent events therefore do not prove that these tests
+  produced new messages or were delivered. The user reported that the
+  message was absent from Proton's Sent folder and the recipient's inbox.
+  Retest with a distinct message or after the suppression window, and verify
+  the test recipient, sending account, and actual delivery before declaring
+  mail verified.
+- The existing Proton Mail Bridge migration recorded `ghost-ghost-1`
+  running on `ghost_network` and `protonmail-network`, using
+  `protonmail-bridge:25` for SMTP, and a delivered test email. Reconfirm this
+  and the full Ghost/MySQL state; that earlier observation is not a complete
+  Ghost baseline.
+- Local synthetic checks passed for the default-off deployment gate, the
+  missing-data guard, and the rendered Compose configuration, including raw
+  secret characters and a missing-secret-file failure. Syntax checks of both
+  playbooks passed with an empty synthetic vault; normal syntax checks could
+  not decrypt the real vault without its password.
+- On 2026-11-02 the user ran host preparation with the Ghost gate off.
+  Ghost's Compose directory and template were created, five environment-file
+  loop items reported changed without exposing their values, and secret
+  validation passed. The other stack deployment and network tasks reported
+  `ok`; the Ghost directory checks and deployment were skipped. The recap was
+  `ok=18`, `changed=3`, `failed=0`, `unreachable=0`, and `skipped=3`.
+  The user subsequently confirmed that both container IDs and start times
+  and both shared network IDs matched the baseline. Both containers remained
+  running with zero restarts. A later read-only inspection confirmed that the
+  shared network membership also matched the pre-preparation inventory.
+- Host-side Compose `v5.4.0` validated the staged configuration with
+  `config --quiet`. The five Ghost environment files reported `root:root`
+  ownership and mode `0600`. Secret-safe comparisons found the staged Ghost
+  database, MySQL user, MySQL root, and Ghost mail passwords equal to their
+  respective live container values. These comparisons did not print secrets
+  or independently test authentication.
+- A read-only comparison found that the staged and live image references,
+  active services, bind mounts, networks, published ports, restart policies,
+  and relevant Ghost and MySQL environment settings matched. The comparison
+  included the SMTP user and sender address without printing their values.
+
+### Live inventory on 2026-11-02
+
+Read-only inspection reported both containers running under project `ghost`
+and `/data/compose/10/docker-compose.yml`. The Ghost service has no Docker
+health check; the MySQL service is healthy. Both use `restart: always`.
+The user repeated the project container listing on 2026-11-02 at about
+22:03: both containers were still running, with MySQL reported healthy.
+A subsequent read-only inspection confirmed zero restarts for both. Ghost's
+container ID was `00861c3287512032d94d0bfa9598a278141a0d7240785e921cb608bf4edefdef`,
+started `2026-10-30T03:24:00.380691264Z`; MySQL's was
+`cc21a8ad20be0fe60dac214498572e7b9904ef5977b669b21d59e55f823c3c19`,
+started `2026-10-30T03:23:49.087001839Z`.
+
+| Service | Image ID and repository digest | Mount | Networks |
+| --- | --- | --- | --- |
+| `ghost-ghost-1` | `ghost@sha256:29886ddcf4ae5c005099c8ade34707d7c8d5d71b9dc5e31473c632b27b2ea18a` | `/home/ansible/docker/ghost/content` to `/var/lib/ghost/content` | `ghost_network`, `protonmail-network` |
+| `ghost-db-1` | `mysql@sha256:f37951fc3753a6a22d6c7bf6978c5e5fefcf6f31814d98c582524f98eae52b21` | `/home/ansible/docker/ghost/mysql` to `/var/lib/mysql` | `ghost_network` |
+
+These image digests and bind paths match the staged variables. Ghost publishes
+`192.168.86.202:2368` to container port 2368; MySQL has no published ports.
+Ghost's aliases on both networks are `ghost-ghost-1` and `ghost`; MySQL's
+aliases on `ghost_network` are `ghost-db-1` and `db`. The existing network
+IDs are `00f51ef7427c0d5c4b0308496ad6ab6ca71dcd0c03861c5a33a2bf9b830df06d`
+for `ghost_network` and
+`d9a162b856038177a7d46fb88a8881161056279298092e05ae60a114eb126d1e`
+for `protonmail-network`; both report bridge driver and local scope.
+The user repeated the mount and network inspection at about 22:04 and
+confirmed the same bind paths and aliases.
+
+The configured database user and database are `ghost`, and the running
+Ghost and MySQL user passwords were present and equal. The root and SMTP
+passwords were present; no secret values were printed. These checks do not
+compare any value against the staged vault. Live SMTP transport, host, port,
+security and TLS-verification settings, plus non-secret Ghost URLs, database
+settings, and Tinybird endpoints match the staged configuration. The
+Tinybird admin token and workspace ID were empty. Only
+the Ghost and MySQL containers were reported for the project, and the usual
+project-prefixed analytics volumes were not present. The user confirmed they
+do not use the optional Tinybird analytics services.
+
+### Before cutover
+
+- [x] Inspect both live containers' Compose project and config path, image
+  references and IDs, restart policies, ports, network names and aliases,
+  health and mount sources. Compare these with the staged configuration,
+  including the digest-pinned images.
+- [x] Confirm the intended analytics profile. The user does not use the
+  optional Tinybird services, so keep the `analytics` profile disabled during
+  this migration. Its build context, volumes, and configuration would need
+  separate validation before enabling it later.
+- [ ] Confirm the existing Ghost content and MySQL bind mounts match
+  `ghost_upload_path` and `ghost_mysql_data_path`. Verify an application-
+  consistent database backup and content backup, plus a practical recovery
+  path. Do not initialize a new database, change data permissions blindly,
+  remove the existing stack or networks, or prune volumes.
+- [x] Save the current Portainer stack definition and effective credentials
+  securely. Compare the staged database and SMTP credentials with the live
+  settings without printing them. Git alone does not back up credentials,
+  application data, or the database.
+- [ ] Confirm the public blog, admin login, existing content, and mail
+  delivery baseline. The user confirmed the public blog and admin login work;
+  the pre-cutover test email was delivered. Existing content has not been
+  separately confirmed.
+- [x] Validate the staged Compose configuration on the host without exposing
+  secrets. A preparation run of the combined playbook reconciles the other
+  migrated stacks and manages shared networks; review its effects first.
+  Verify that Ghost remains untouched with `deploy_ghost` unset and that the
+  existing shared networks retain their identities and membership.
+- [ ] Agree on a maintenance window, an Ansible-based rollback procedure,
+  and a decision point. Stop the Portainer-managed stack only when ready,
+  retain its record and data, then enable `deploy_ghost` for the native
+  Ansible deployment. Never run both projects against the same database.
+- [ ] After cutover, verify the live project labels, images, mounts, networks,
+  health, blog, admin, existing content, and mail. Rerun Ansible to check
+  idempotency, and confirm Portainer automation does not reclaim the stack.
+  Keep the deployment gate until the migration is accepted.
+
+### Ghost verification commands
+
+Run these read-only commands on the container-manager host. The container
+names are from the inventory above; verify the project list first if they
+change. They do not stop, create, or deploy containers.
+
+**Inventory and post-cutover comparison:**
+
+```bash
+sudo docker ps -a --filter label=com.docker.compose.project=ghost \
+  --format 'name={{.Names}} image={{.Image}} status={{.Status}}'
+
+sudo docker inspect ghost-ghost-1 ghost-db-1 \
+  --format '{{$health := index .State "Health"}}{{.Name}} id={{.Id}} project={{index .Config.Labels "com.docker.compose.project"}} service={{index .Config.Labels "com.docker.compose.service"}} config={{index .Config.Labels "com.docker.compose.project.config_files"}} image={{.Config.Image}} image_id={{.Image}} started={{.State.StartedAt}} status={{.State.Status}} health={{if $health}}{{index $health "Status"}}{{else}}none{{end}} restarts={{.RestartCount}} restart_policy={{.HostConfig.RestartPolicy.Name}} ports={{json .NetworkSettings.Ports}}'
+
+sudo docker inspect ghost-ghost-1 ghost-db-1 \
+  --format '{{.Name}}{{range .Mounts}}{{println}}mount_type={{.Type}} source={{.Source}} destination={{.Destination}} rw={{.RW}}{{end}}{{range $name, $network := .NetworkSettings.Networks}}{{println}}network={{$name}} aliases={{json $network.Aliases}}{{end}}'
+
+sudo docker network inspect ghost_network protonmail-network \
+  --format 'name={{.Name}} id={{.Id}} driver={{.Driver}} scope={{.Scope}}{{range .Containers}}{{println}} member={{.Name}}{{end}}'
+
+sudo docker volume ls --filter name=ghost_
+```
+
+Compare container IDs and start times before and after preparation to confirm
+that it did not recreate Ghost or MySQL. After cutover, verify the Compose
+config path is `/opt/compose/ghost/compose.yml` and compare the other settings
+with the live inventory. Network membership can include other applications;
+preserve those endpoints. The volume listing can help identify analytics
+volumes but does not establish whether analytics is intended to be used.
+
+**After the gated preparation run**, validate the staged files without
+printing their contents:
+
+```bash
+sudo docker compose version
+sudo stat -c '%a %U:%G %n' /opt/compose/ghost/.env \
+  /opt/compose/ghost/ghost-db-pass.env /opt/compose/ghost/db-pass.env \
+  /opt/compose/ghost/db-root-pass.env /opt/compose/ghost/email-pass.env
+sudo docker compose -p ghost --project-directory /opt/compose/ghost \
+  -f /opt/compose/ghost/compose.yml config --quiet
+sudo docker compose -p ghost --project-directory /opt/compose/ghost \
+  -f /opt/compose/ghost/compose.yml config --profiles
+sudo docker compose -p ghost --project-directory /opt/compose/ghost \
+  -f /opt/compose/ghost/compose.yml config --services
+```
+
+Compose must support `env_file` with `format: raw` (version 2.30 or later).
+The profiles command lists *declared* profiles, not whether they are active
+or needed; the services command shows the default-profile services. Review
+any intended analytics build context separately. Do not run `docker compose
+config` without a limiting option: its output can contain secrets.
+
+**Compare staged secrets with the still-running Portainer containers** without
+printing the values. Run this only after preparation has rendered the files:
+
+```bash
+sudo python3 - <<'PY'
+import json
+import subprocess
+from pathlib import Path
+
+containers = json.loads(subprocess.check_output(
+    ["docker", "inspect", "ghost-ghost-1", "ghost-db-1"], text=True
+))
+environment = {
+    container["Name"].lstrip("/"): container["Config"]["Env"]
+    for container in containers
+}
+checks = [
+    ("Ghost database", "ghost-ghost-1", "database__connection__password",
+     "ghost-db-pass.env"),
+    ("MySQL user", "ghost-db-1", "MYSQL_PASSWORD", "db-pass.env"),
+    ("MySQL root", "ghost-db-1", "MYSQL_ROOT_PASSWORD", "db-root-pass.env"),
+    ("Ghost mail", "ghost-ghost-1", "mail__options__auth__pass",
+     "email-pass.env"),
+]
+ok = True
+for label, container, key, filename in checks:
+    prefix = key + "="
+    live = [entry[len(prefix):] for entry in environment[container]
+            if entry.startswith(prefix)]
+    path = Path("/opt/compose/ghost") / filename
+    staged = [line[len(prefix):] for line in path.read_text().splitlines()
+              if line.startswith(prefix)]
+    match = len(live) == len(staged) == 1 and bool(live[0]) and live[0] == staged[0]
+    print(f"{label}: {'MATCH' if match else 'MISSING OR MISMATCH'}")
+    ok = ok and match
+if not ok:
+    raise SystemExit(1)
+PY
+```
+
+An error, missing entry, or mismatch requires investigation before cutover.
+Matching environment values do not prove MySQL authentication or mail
+delivery works; verify those separately. Do not post raw container environments,
+secret files, or unrestricted Compose output.
+
 ## Later migrations
 
 Use the website pilot's lessons to plan the other stacks separately. Stateful
