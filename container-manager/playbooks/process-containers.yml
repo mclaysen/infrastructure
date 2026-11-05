@@ -225,7 +225,6 @@
         path: "{{ item }}"
         state: directory
         mode: '0755'
-        recurse: true
       loop:
         - "{{ snmp_exporter_config_path | ansible.builtin.dirname }}"
         - "{{ prometheus_config_path | ansible.builtin.dirname }}"
@@ -292,4 +291,3 @@
         project_src: /opt/compose/monitoring
         remove_orphans: true
         project_name: monitoring
-      when: monitoring_stack_enabled | default(false) | bool
