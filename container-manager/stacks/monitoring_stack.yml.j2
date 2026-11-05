@@ -29,8 +29,8 @@ services:
     container_name: grafana
     restart: unless-stopped
     environment:
-      - GF_SERVER_ROOT_URL=https://monitoring.{{ domain }}
-      - GF_PLUGINS_PREINSTALL=grafana-clock-panel
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
+      - GF_PLUGINS_PREINSTALL=${GF_PLUGINS_PREINSTALL}
     ports:
       - '3001:3000'
     volumes:
@@ -49,22 +49,24 @@ services:
     ports:
       - '9130:9130'
     container_name: unpoller
+    env_file:
+      - path: ./unfi-pass.env
+        format: raw
     environment:
-      - UP_INFLUXDB_DISABLE=true
-      - UP_POLLER_DEBUG=false
-      - UP_UNIFI_DYNAMIC=false
-      - UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130
-      - UP_PROMETHEUS_NAMESPACE=unpoller
-      - UP_PROMETHEUS_DISABLE=false
-      - UP_UNIFI_DEFAULT_SAVE_ALARMS=true
-      - UP_UNIFI_DEFAULT_SAVE_ANOMALIES=true
-      - UP_UNIFI_DEFAULT_SAVE_DPI=true
-      - UP_UNIFI_DEFAULT_SAVE_EVENTS=true
-      - UP_UNIFI_DEFAULT_SAVE_IDS=true
-      - UP_UNIFI_DEFAULT_SAVE_SITES=true
-      - UP_UNIFI_DEFAULT_PASS={{ unifi_unpoller_password }}
-      - UP_UNIFI_DEFAULT_URL={{ unifi_url }}
-      - UP_UNIFI_DEFAULT_USER={{ unifi_unpoller_user }}
+      - UP_INFLUXDB_DISABLE=${UP_INFLUXDB_DISABLE}
+      - UP_POLLER_DEBUG=${UP_POLLER_DEBUG}
+      - UP_UNIFI_DYNAMIC=${UP_UNIFI_DYNAMIC}
+      - UP_PROMETHEUS_HTTP_LISTEN=${UP_PROMETHEUS_HTTP_LISTEN}
+      - UP_PROMETHEUS_NAMESPACE=${UP_PROMETHEUS_NAMESPACE}
+      - UP_PROMETHEUS_DISABLE=${UP_PROMETHEUS_DISABLE}
+      - UP_UNIFI_DEFAULT_SAVE_ALARMS=${UP_UNIFI_DEFAULT_SAVE_ALARMS}
+      - UP_UNIFI_DEFAULT_SAVE_ANOMALIES=${UP_UNIFI_DEFAULT_SAVE_ANOMALIES}
+      - UP_UNIFI_DEFAULT_SAVE_DPI=${UP_UNIFI_DEFAULT_SAVE_DPI}
+      - UP_UNIFI_DEFAULT_SAVE_EVENTS=${UP_UNIFI_DEFAULT_SAVE_EVENTS}
+      - UP_UNIFI_DEFAULT_SAVE_IDS=${UP_UNIFI_DEFAULT_SAVE_IDS}
+      - UP_UNIFI_DEFAULT_SAVE_SITES=${UP_UNIFI_DEFAULT_SAVE_SITES}
+      - UP_UNIFI_DEFAULT_URL=${UP_UNIFI_DEFAULT_URL}
+      - UP_UNIFI_DEFAULT_USER=${UP_UNIFI_DEFAULT_USER}
     networks:
       - monitoring-network
   loki:

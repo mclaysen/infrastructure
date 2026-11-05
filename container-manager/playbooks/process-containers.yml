@@ -23,6 +23,7 @@
         - /opt/compose/newt
         - /opt/compose/protonmail_bridge
         - /opt/compose/ghost
+        - /opt/compose/monitoring
 
     - name: Create compose files
       ansible.builtin.template:
@@ -38,6 +39,7 @@
         - {src: ../stacks/newt.yml.j2, dest: /opt/compose/newt/compose.yml }
         - {src: ../stacks/proton_mail_bridge.yml.j2, dest: /opt/compose/protonmail_bridge/compose.yml }
         - {src: ../stacks/ghost.yml.j2, dest: /opt/compose/ghost/compose.yml }
+        - {src: ../stacks/monitoring.yml.j2, dest: /opt/compose/monitoring/compose.yml }
 
     - name: Validate required secrets
       ansible.builtin.assert:
@@ -56,6 +58,7 @@
         - value: "{{ ghost_database_password }}"
         - value: "{{ ghost_database_root_password }}"
         - value: "{{ email_password }}"
+        - value: "{{ unifi_unpoller_password }}"
       no_log: true
 
     - name: Create environment files
@@ -84,6 +87,8 @@
         - {src: ../stacks/ghost.db-pass.env.j2, dest: /opt/compose/ghost/db-pass.env }
         - {src: ../stacks/ghost.db-root-pass.env.j2, dest: /opt/compose/ghost/db-root-pass.env }
         - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
+        - {src: ../stacks/monitoring_stack.env.j2, dest: /opt/compose/monitoring/.env }
+        - {src: ../stacks/monitoring_stack.unfi-pass.env.j2, dest: /opt/compose/monitoring/unfi-pass.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -112,6 +117,11 @@
     - name: Create pangolin network
       community.docker.docker_network:
         name: pangolin_network
+        state: present
+
+    - name: Create monitoring network
+      community.docker.docker_network:
+        name: monitoring_network
         state: present
 
     - name: Create protonmail network
@@ -209,3 +219,76 @@
         project_src: /opt/compose/ghost
         remove_orphans: true
         project_name: ghost
+
+    - name: Create monitoring config directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        recurse: true
+      loop:
+        - "{{ snmp_exporter_config_path | ansible.builtin.dirname }}"
+        - "{{ prometheus_config_path | ansible.builtin.dirname }}"
+
+    - name: Create monitoring config directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+      loop:
+        - "{{ alloy_config_dir }}"
+        - "{{ loki_config_path | ansible.builtin.dirname }}"
+        - "{{ blackbox_exporter_config_path | ansible.builtin.dirname }}"
+
+    - name: Place Prometheus configuration
+      ansible.builtin.template:
+        src: ../stacks/prometheus_config.yml.j2
+        dest: "{{ prometheus_config_path }}"
+        mode: '0644'
+
+    - name: Place SNMP Exporter configuration
+      ansible.builtin.template:
+        src: ../stacks/snmp_config.yml.j2
+        dest: "{{ snmp_exporter_config_path }}"
+        mode: '0644'
+
+    - name: Place Alloy configuration
+      ansible.builtin.template:
+        src: ../templates/alloy_config.alloy.j2
+        dest: "{{ alloy_config_dir }}/config.alloy"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Place Loki configuration
+      ansible.builtin.template:
+        src: ../templates/loki_config.yml.j2
+        dest: "{{ loki_config_path }}"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Place Blackbox Exporter configuration
+      ansible.builtin.template:
+        src: ../templates/blackbox_config.yml.j2
+        dest: "{{ blackbox_exporter_config_path }}"
+        mode: '0644'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+
+    - name: Deploy docker config
+      ansible.builtin.template:
+        src: ../../shared/templates/docker_daemon.json.j2
+        dest: /etc/docker/daemon.json
+      notify: restart docker
+
+    - name: Deploy monitoring apps
+      ansible.builtin.import_tasks: ../tasks/apps.yml
+
+    - name: Deploy Monitoring containers
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/monitoring
+        remove_orphans: true
+        project_name: monitoring
