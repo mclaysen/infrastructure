@@ -1812,6 +1812,82 @@ Matching environment values do not prove MySQL authentication or mail
 delivery works; verify those separately. Do not post raw container environments,
 secret files, or unrestricted Compose output.
 
+## Next migration: monitoring stack
+
+Move the existing monitoring project from Portainer to the combined
+Ansible-managed Compose playbook. Preserve its data and the shared network;
+preparation alone is not authorization to stop or replace the live stack.
+
+### Inventory and recovery
+
+- [x] Inventory the seven running services, their images, mounts, ports,
+  restart policies, and networks. On 2026-11-04, all seven were running
+  under project `monitoring_stack` and `/data/compose/1/docker-compose.yml`.
+- [x] Identify the four volumes in use: `monitoring_stack_grafana_storage`,
+  `monitoring_stack_prometheus_data`, `monitoring_stack_loki_data`, and
+  `monitoring_stack_alloy_data`. The shared `monitoring-network` also has
+  `dawarich_app` and `photon-dawarich` members. The separate
+  `monitoring_stack_monitoring-network` had no members at inventory time.
+- [x] Record a basic baseline: Grafana, Loki, Alloy, and unpoller HTTP
+  checks succeeded, and all 23 active Prometheus targets were up. Unpoller
+  was healthy but had eight restarts; recent log classifications included
+  authentication and timeout markers. Their cause has not been established.
+- [ ] Confirm Grafana login and expected dashboards and data, current logs,
+  and scrape targets. Recheck unpoller and decide whether its earlier
+  restarts need investigation before cutover.
+- [ ] Confirm the backup covers all four volumes and required bind-mounted
+  configuration. Verify a practical restore or explicitly accept the
+  untested recovery risk. Save the existing Portainer definition and
+  credentials securely.
+
+### Review and prepare
+
+- [ ] Correct the native playbook's missing monitoring Compose template
+  source. As written, it fails during template staging, before the combined
+  playbook can reconcile its stacks.
+- [ ] Preserve the existing project and volume identities. The proposed
+  project name `monitoring` would resolve different volume names from the
+  existing `monitoring_stack` project and could start with empty data.
+  Verify that all four intended volumes exist before deployment; volume
+  existence alone does not establish recoverability.
+- [ ] Manage the existing `monitoring-network`, not a newly created
+  `monitoring_network`. Keep the network available to Dawarich, including
+  on a clean install or recovery, and do not remove either existing network
+  or its members during the migration.
+- [ ] Keep monitoring deployment gated until the cutover is approved. The
+  current native task runs unconditionally, while Portainer's running
+  containers still own the fixed container names. Decide when to remove
+  monitoring from Portainer automation so the two workflows do not compete.
+- [ ] Keep the unpoller password only in the raw service secret file.
+  Its duplicate in the Compose interpolation `.env` is parsed as dotenv
+  syntax, so some otherwise valid raw passwords can make Compose fail.
+  Compare the staged secret with the live value without printing either.
+- [ ] Preserve the existing node-exporter and cAdvisor management workflow:
+  moving their role import out of the normal container-manager playbook
+  changes what that workflow manages. Review the relocated Docker daemon
+  configuration and its restart handler for possible effects on all stacks.
+- [ ] Validate the rendered Compose configuration, images, environment,
+  ports, bind mounts, named volumes, networks, and dependencies against
+  the live inventory. Verify secret file ownership and mode, and avoid
+  printing secrets. Pin or otherwise preserve the live image versions for
+  cutover. Review the combined playbook's effects on other stacks.
+
+### Cutover and verification
+
+- [ ] Agree on the maintenance window, backup and rollback decision, and
+  stop/start order. Expect a monitoring gap; do not prune volumes or networks.
+  Only stop the Portainer stack when the user approves cutover.
+- [ ] Confirm old containers are stopped or removed as intended while the
+  four data volumes and shared network remain intact. Deploy the native
+  project through Ansible, not manual Compose deployment.
+- [ ] Verify container labels and config path, image identities, volume
+  mounts, ports, network members, and health. Confirm Grafana dashboards,
+  Prometheus targets, Loki logs, Alloy ingestion, and unpoller metrics.
+  Check that Dawarich remains on the shared network.
+- [ ] Rerun the combined playbook to check idempotency and confirm Portainer
+  automation does not reclaim the stack. Preserve the old definition and
+  recovery data until the migration is accepted.
+
 ## Later migrations
 
 Use the website pilot's lessons to plan the other stacks separately. Stateful
