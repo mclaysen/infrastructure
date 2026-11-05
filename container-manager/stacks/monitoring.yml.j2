@@ -120,10 +120,14 @@ services:
       loki:
         condition: service_healthy
 volumes:
-  grafana_storage: {}
+  grafana_storage:
+    name: monitoring_stack_grafana_storage
   prometheus_data:
-  loki_data: {}
-  alloy_data: {}
+    name: monitoring_stack_prometheus_data
+  loki_data:
+    name: monitoring_stack_loki_data
+  alloy_data:
+    name: monitoring_stack_alloy_data
 networks:
   monitoring-network:
     name: monitoring-network

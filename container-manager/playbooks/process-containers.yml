@@ -87,8 +87,8 @@
         - {src: ../stacks/ghost.db-pass.env.j2, dest: /opt/compose/ghost/db-pass.env }
         - {src: ../stacks/ghost.db-root-pass.env.j2, dest: /opt/compose/ghost/db-root-pass.env }
         - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
-        - {src: ../stacks/monitoring_stack.env.j2, dest: /opt/compose/monitoring/.env }
-        - {src: ../stacks/monitoring_stack.unfi-pass.env.j2, dest: /opt/compose/monitoring/unfi-pass.env }
+        - {src: ../stacks/monitoring.env.j2, dest: /opt/compose/monitoring/.env }
+        - {src: ../stacks/monitoring.unfi-pass.env.j2, dest: /opt/compose/monitoring/unfi-pass.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -121,7 +121,7 @@
 
     - name: Create monitoring network
       community.docker.docker_network:
-        name: monitoring_network
+        name: monitoring-network
         state: present
 
     - name: Create protonmail network
@@ -292,3 +292,4 @@
         project_src: /opt/compose/monitoring
         remove_orphans: true
         project_name: monitoring
+      when: monitoring_stack_enabled | default(false) | bool
