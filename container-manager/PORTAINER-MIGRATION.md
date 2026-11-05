@@ -1832,45 +1832,68 @@ preparation alone is not authorization to stop or replace the live stack.
   checks succeeded, and all 23 active Prometheus targets were up. Unpoller
   was healthy but had eight restarts; recent log classifications included
   authentication and timeout markers. Their cause has not been established.
-- [ ] Confirm Grafana login and expected dashboards and data, current logs,
-  and scrape targets. Recheck unpoller and decide whether its earlier
-  restarts need investigation before cutover.
-- [ ] Confirm the backup covers all four volumes and required bind-mounted
-  configuration. Verify a practical restore or explicitly accept the
-  untested recovery risk. Save the existing Portainer definition and
-  credentials securely.
+- [x] Confirm Grafana login and visibility of dashboards, logs, and scrape
+  targets. The user confirmed these on 2026-11-04.
+- [ ] Recheck unpoller and decide whether its earlier restarts need
+  investigation before cutover.
+- [x] Decide whether the existing backup is acceptable. The user accepted
+  the backup as-is; monitoring volume coverage and restore remain unverified.
+- [x] Save the existing Portainer definition and credentials securely. The
+  user confirmed these are saved.
 
 ### Review and prepare
 
-- [ ] Correct the native playbook's missing monitoring Compose template
-  source. As written, it fails during template staging, before the combined
-  playbook can reconcile its stacks.
-- [ ] Preserve the existing project and volume identities. The proposed
-  project name `monitoring` would resolve different volume names from the
-  existing `monitoring_stack` project and could start with empty data.
-  Verify that all four intended volumes exist before deployment; volume
-  existence alone does not establish recoverability.
-- [ ] Manage the existing `monitoring-network`, not a newly created
-  `monitoring_network`. Keep the network available to Dawarich, including
-  on a clean install or recovery, and do not remove either existing network
-  or its members during the migration.
-- [ ] Keep monitoring deployment gated until the cutover is approved. The
-  current native task runs unconditionally, while Portainer's running
-  containers still own the fixed container names. Decide when to remove
-  monitoring from Portainer automation so the two workflows do not compete.
-- [ ] Keep the unpoller password only in the raw service secret file.
-  Its duplicate in the Compose interpolation `.env` is parsed as dotenv
-  syntax, so some otherwise valid raw passwords can make Compose fail.
-  Compare the staged secret with the live value without printing either.
-- [ ] Preserve the existing node-exporter and cAdvisor management workflow:
-  moving their role import out of the normal container-manager playbook
-  changes what that workflow manages. Review the relocated Docker daemon
-  configuration and its restart handler for possible effects on all stacks.
-- [ ] Validate the rendered Compose configuration, images, environment,
-  ports, bind mounts, named volumes, networks, and dependencies against
-  the live inventory. Verify secret file ownership and mode, and avoid
-  printing secrets. Pin or otherwise preserve the live image versions for
-  cutover. Review the combined playbook's effects on other stacks.
+- [x] Correct the Compose template source and track the renamed monitoring
+  templates. The playbook now references the existing files.
+- [x] Specify the four existing volume names explicitly. A synthetic Compose
+  comparison matched those names and all seven service environments.
+- [x] Confirm all four volumes exist on the host. The user inspected them
+  on 2026-11-04; all use the local driver. This does not verify their
+  contents or recoverability.
+- [x] Decide how to handle missing volumes. The user chose to leave the
+  current configuration unchanged; Compose may create an empty volume if
+  an expected volume is missing.
+- [x] Correct the network task to use `monitoring-network`.
+- [ ] Ensure the shared network exists before Portainer deploys Dawarich on
+  a clean install or recovery. The network task now lives in the separate
+  container playbook. Preserve the existing network and its members.
+- [x] Default the native monitoring deployment gate to disabled. The
+  Portainer containers still own the fixed names; enable the gate only
+  after cutover is approved and the old containers are stopped or removed.
+- [x] Review the combined playbook before the preparation run: disabling
+  monitoring deployment does not prevent it from updating monitoring
+  configuration, reconciling other stacks, or restarting Docker if its
+  daemon configuration changes. Monitoring has been removed from the
+  repository's Portainer stack list; coordinate which automation is run.
+  An Ansible check of the Docker daemon template on 2026-11-04 reported no
+  change; this does not predict changes from other tasks.
+- [x] Run preparation with `monitoring_stack_enabled=false`. The recap was
+  `ok=61`, `changed=8`, `failed=0`, and monitoring deployment was skipped.
+  Prometheus and SNMP configuration tasks reported changes; their mounted
+  runtime files matched the corresponding host files afterward. All seven
+  monitoring container IDs and start times matched the earlier inventory,
+  and the shared network retained its ID and both Dawarich members.
+- [x] Remove the unpoller password from the interpolation `.env`; it is
+  now supplied through a raw service secret file.
+- [x] Compare the staged unpoller secret with the live value without
+  printing either; they matched after preparation.
+- [x] Move node-exporter and cAdvisor setup to the container playbook. The
+  user accepted this change in management workflow.
+- [x] Validate the staged Compose configuration on the host. Both `.env`
+  and the raw secret file are `root:root` mode `0600`. The staged image
+  references, environment values, mounts, volume names, networks, IPv4
+  port bindings, and restart policies matched the live containers without
+  printing secrets. After preparation, all 23 active Prometheus targets
+  were up and Grafana, Loki, and Alloy HTTP checks succeeded.
+- [x] Compare dependency conditions and local image IDs with the running
+  containers; they matched after preparation.
+- [x] Pin all seven monitoring images to the observed running digests in
+  the repository. The user chose digest pins for cutover; a synthetic
+  render passed Compose validation, and each pinned reference resolved to
+  its running image on the host.
+- [ ] Restage the updated Compose file with deployment disabled, then
+  verify the pinned references resolve to the running images. Verify actual
+  application behavior after deployment.
 
 ### Cutover and verification
 
