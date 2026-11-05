@@ -1950,14 +1950,13 @@ preparation alone is not authorization to stop or replace the live stack.
   counts the entire failed batch as dropped on HTTP 400. This supports
   historical replay and partial acceptance as explanations, but does not
   establish the fate of every entry in the batch.
-- [ ] Rerun the combined playbook to check idempotency and confirm Portainer
-  automation does not reclaim the stack. Preserve the old definition and
-  recovery data until the migration is accepted. The last two runs changed
-  the Prometheus and SNMP directories and configuration tasks because the
-  directory task recursively set file modes to `0755`, while the templates
-  set them to `0644`. Recursive mode setting was removed locally; a
-  synthetic two-run test preserved the intended modes and reported
-  `changed=0` on the second run.
+- [x] Rerun the combined playbook to check idempotency. The run reported
+  `ok=62`, `changed=0`, and `failed=0`, including the monitoring deployment
+  and the Prometheus and SNMP directory and configuration tasks. The user
+  removed the monitoring deployment gate, so future runs reconcile it
+  without an extra variable.
+- [ ] Confirm Portainer automation does not reclaim the stack. Preserve
+  the old definition and recovery data until the migration is accepted.
 
 ## Later migrations
 
