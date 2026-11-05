@@ -1891,25 +1891,73 @@ preparation alone is not authorization to stop or replace the live stack.
   the repository. The user chose digest pins for cutover; a synthetic
   render passed Compose validation, and each pinned reference resolved to
   its running image on the host.
-- [ ] Restage the updated Compose file with deployment disabled, then
-  verify the pinned references resolve to the running images. Verify actual
-  application behavior after deployment.
+- [x] Restage the updated Compose file and verify the pinned references
+  resolve to the running images. The user confirmed Compose validation
+  succeeded; a host check confirmed all seven pinned images match, the
+  renamed raw secret matches the live unpoller credential, and both
+  environment files are `root:root` mode `0600`. All seven original
+  containers remained running. Before restaging, the old raw secret file
+  was missing for an unknown reason.
+- [x] Use the agreed Docker stop alternative. The user reported that
+  Portainer's stop action appeared to have no effect, even after confirming
+  the dialog; its cause remains unknown.
 
 ### Cutover and verification
 
-- [ ] Agree on the maintenance window, backup and rollback decision, and
-  stop/start order. Expect a monitoring gap; do not prune volumes or networks.
-  Only stop the Portainer stack when the user approves cutover.
-- [ ] Confirm old containers are stopped or removed as intended while the
-  four data volumes and shared network remain intact. Deploy the native
-  project through Ansible, not manual Compose deployment.
-- [ ] Verify container labels and config path, image identities, volume
-  mounts, ports, network members, and health. Confirm Grafana dashboards,
-  Prometheus targets, Loki logs, Alloy ingestion, and unpoller metrics.
-  Check that Dawarich remains on the shared network.
+- [x] With the user's approval, stop the seven Portainer-managed containers
+  using Docker on 2026-11-04. All remain present but stopped; no native
+  monitoring containers are running. Alloy and Loki received SIGKILL after
+  SIGTERM and exited 137; neither reported an OOM kill. Check their recovery
+  and data after deployment.
+- [x] Confirm all four data volumes and the shared network remain present
+  after stopping; both Dawarich containers remain connected and healthy.
+- [x] With the user's approval, remove the stopped containers to free their
+  fixed names, without removing their volumes or the shared network. Deploy
+  the native project through Ansible. The recap was `ok=62`, `changed=4`,
+  `failed=0`. Compose warned that the four reused volumes have labels from
+  the old project.
+- [x] Check native project labels, pinned image references, mounts,
+  environment, IPv4 ports, and restart policies against the staged
+  configuration. All seven containers were running with zero restarts,
+  all 23 active Prometheus targets were up, and Grafana, Loki, Alloy, and
+  unpoller HTTP checks passed. The shared network retained its ID and both
+  Dawarich members.
+- [ ] Review Loki's WAL recovery risk before accepting the migration.
+  Loki reported a corrupt WAL segment during startup after its forced stop;
+  its corruption metric was 1 and its configuration has replication
+  factor 1. Some log entries may not have recovered, but the extent and
+  cause are unknown. Loki finished checkpoint recovery without errors but
+  reported errors during segment recovery. Loki is healthy and a 24-hour
+  log count query succeeded. As a limited check, all 166 timestamped Docker
+  lines sampled from four surviving containers between 04:25 and 04:34:20 UTC
+  on November 5 matched entries in Loki. These checks do not prove that
+  historical logs, other containers, or syslog entries are complete.
+- [x] Confirm Grafana login and dashboards, and visibility of recent and
+  pre-interruption logs. The user confirmed these work; this does not prove
+  that every historical log entry was recovered.
+- [x] Confirm Alloy is receiving Docker and syslog entries and sending logs
+  to Loki: its sent-entry counter increased by 21 in a 15-second observation.
+- [ ] Review Alloy's startup drops before accepting the migration.
+  Its dropped-entry counter was 416 and remained stable during follow-up
+  checks while the sent-entry counter increased. The logged rejection was
+  HTTP 400 for a timestamp too old: the reported `portainer_agent` Docker
+  entry timestamp was 2026-10-25, before Loki's 2026-10-29 acceptance
+  cutoff. That specific Docker entry matched an entry already stored in
+  Loki. Loki's old-sample discard counter was 1, not 416. The deployed
+  [Loki version](https://github.com/grafana/loki/blob/v3.6.7/pkg/distributor/distributor.go)
+  processes valid entries before returning validation errors, while the
+  deployed [Alloy version](https://github.com/grafana/alloy/blob/v1.14.1/internal/component/common/loki/client/shards.go)
+  counts the entire failed batch as dropped on HTTP 400. This supports
+  historical replay and partial acceptance as explanations, but does not
+  establish the fate of every entry in the batch.
 - [ ] Rerun the combined playbook to check idempotency and confirm Portainer
   automation does not reclaim the stack. Preserve the old definition and
-  recovery data until the migration is accepted.
+  recovery data until the migration is accepted. The last two runs changed
+  the Prometheus and SNMP directories and configuration tasks because the
+  directory task recursively set file modes to `0755`, while the templates
+  set them to `0644`. Recursive mode setting was removed locally; a
+  synthetic two-run test preserved the intended modes and reported
+  `changed=0` on the second run.
 
 ## Later migrations
 
