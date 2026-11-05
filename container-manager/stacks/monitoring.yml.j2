@@ -25,7 +25,7 @@ services:
     networks:
       - monitoring-network
   grafana:
-    image: grafana/grafana-enterprise:12.3.1
+    image: grafana/grafana-enterprise:{{ grafana_version }}
     container_name: grafana
     restart: unless-stopped
     environment:
@@ -44,13 +44,13 @@ services:
     depends_on:
       - prometheus
   unpoller:
-    image: ghcr.io/unpoller/unpoller:v2.33.0
+    image: ghcr.io/unpoller/unpoller:{{ unpoller_version }}
     restart: unless-stopped
     ports:
       - '9130:9130'
     container_name: unpoller
     env_file:
-      - path: ./unfi-pass.env
+      - path: ./unpoller-pass.env
         format: raw
     environment:
       - UP_INFLUXDB_DISABLE=${UP_INFLUXDB_DISABLE}

@@ -88,7 +88,7 @@
         - {src: ../stacks/ghost.db-root-pass.env.j2, dest: /opt/compose/ghost/db-root-pass.env }
         - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
         - {src: ../stacks/monitoring.env.j2, dest: /opt/compose/monitoring/.env }
-        - {src: ../stacks/monitoring.unfi-pass.env.j2, dest: /opt/compose/monitoring/unfi-pass.env }
+        - {src: ../stacks/monitoring.unpoller-pass.env.j2, dest: /opt/compose/monitoring/unpoller-pass.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
