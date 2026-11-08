@@ -24,6 +24,7 @@
         - /opt/compose/protonmail_bridge
         - /opt/compose/ghost
         - /opt/compose/monitoring
+        - /opt/compose/dawarich
 
     - name: Create compose files
       ansible.builtin.template:
@@ -40,6 +41,7 @@
         - {src: ../stacks/proton_mail_bridge.yml.j2, dest: /opt/compose/protonmail_bridge/compose.yml }
         - {src: ../stacks/ghost.yml.j2, dest: /opt/compose/ghost/compose.yml }
         - {src: ../stacks/monitoring.yml.j2, dest: /opt/compose/monitoring/compose.yml }
+        - {src: ../stacks/dawarich.yml.j2, dest: /opt/compose/dawarich/compose.yml }
 
     - name: Validate required secrets
       ansible.builtin.assert:
@@ -59,6 +61,9 @@
         - value: "{{ ghost_database_root_password }}"
         - value: "{{ email_password }}"
         - value: "{{ unifi_unpoller_password }}"
+        - value: "{{ dawarich_postgres_password }}"
+        - value: "{{ dawarich_secret_key_base }}"
+        - value: "{{ dawarich_metrics_password }}"
       no_log: true
 
     - name: Create environment files
@@ -89,6 +94,12 @@
         - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
         - {src: ../stacks/monitoring.env.j2, dest: /opt/compose/monitoring/.env }
         - {src: ../stacks/monitoring.unpoller-pass.env.j2, dest: /opt/compose/monitoring/unpoller-pass.env }
+        - {src: ../stacks/dawarich.env.j2, dest: /opt/compose/dawarich/.env }
+        - {src: ../stacks/dawarich.postgres-pass.env.j2, dest: /opt/compose/dawarich/postgres-pass.env }
+        - {src: ../stacks/dawarich.database-pass.env.j2, dest: /opt/compose/dawarich/database-pass.env }
+        - {src: ../stacks/dawarich.secret-key.env.j2, dest: /opt/compose/dawarich/secret-key.env }
+        - {src: ../stacks/dawarich.smtp-pass.env.j2, dest: /opt/compose/dawarich/smtp-pass.env }
+        - {src: ../stacks/dawarich.metrics-pass.env.j2, dest: /opt/compose/dawarich/metrics-pass.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:
@@ -132,6 +143,11 @@
     - name: Create ghost network
       community.docker.docker_network:
         name: ghost_network
+        state: present
+
+    - name: Create dawarich network
+      community.docker.docker_network:
+        name: dawarich_network
         state: present
 
     - name: Inspect Jellyfin media mounts
@@ -291,3 +307,32 @@
         project_src: /opt/compose/monitoring
         remove_orphans: true
         project_name: monitoring
+
+    - name: Inspect existing Dawarich volumes
+      community.docker.docker_volume_info:
+        name: "{{ item }}"
+      loop:
+        - dawarich_dawarich_db_data
+        - dawarich_dawarich_shared
+        - dawarich_dawarich_public
+        - dawarich_dawarich_watched
+        - dawarich_dawarich_storage
+        - dawarich_photon_data
+      register: dawarich_volumes
+
+    - name: Require existing Dawarich volumes
+      ansible.builtin.assert:
+        that:
+          - item.exists
+        fail_msg: >-
+          {{ item.item }} is missing. Verify the existing Dawarich data
+          before deploying.
+      loop: "{{ dawarich_volumes.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Deploy Dawarich containers
+      community.docker.docker_compose_v2:
+        project_src: /opt/compose/dawarich
+        remove_orphans: true
+        project_name: dawarich
