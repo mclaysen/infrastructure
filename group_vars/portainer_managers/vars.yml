@@ -120,6 +120,9 @@ ghost_domain: blog.mclaysen.com
 ghost_email_from: "notifications@{{ domain }}"
 
 #dawarich
+dawarich_redis_version: 7.4-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+dawarich_postgis_version: 17-3.5-alpine@sha256:fae81f3e8da88b8e684c58c8a8616aadda72e6fc1affcb050b490891ecb3db1c
+dawarich_version: 1.15.3@sha256:589e3606b11b61c3fa2d9661832cb73645a9b93a9cc7d807a071e2bc6c584498
 dawarich_app_port: 3003
 dawarich_application_hosts: localhost,::1,127.0.0.1,maps.mclaysen.com,192.168.86.202,dawarich_app:3000
 dawarich_prometheus_exporter_enabled: true
