@@ -1,23 +1,4 @@
 ---
-- name: Prepare Stack Configurations
-  hosts: container_manager
-  become: true
-  handlers:
-    - ansible.builtin.import_tasks: ../handlers/main.yml
-  vars_files:
-    - ../../group_vars/portainer_managers/vars.yml
-    - ../../group_vars/portainer_managers/vault.yml
-  tasks:
-
-    - name: Create immich upload directory and db_data directory
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - "{{ immich_upload_location }}"
-        - "{{ immich_db_data_location }}"
-
 - name: Manage Portainer stacks
   hosts: portainer_managers
   gather_facts: false
@@ -30,29 +11,13 @@
     portainer_url: "{{ portainer_manager_endpoint }}"
     portainer_token: "{{ portainer_api_token }}"
     rendered_dir: /tmp/portainer-stacks
-    stacks:
-      - name: immich
-        template: ../stacks/immich.yml.j2
-        stack_type: standalone
-        endpoint_id: "{{ endpoint_id }}"
-        env:
-          - name: UPLOAD_LOCATION
-            value: "{{ immich_upload_location }}"
-          - name: DB_DATA_LOCATION
-            value: "{{ immich_db_data_location }}"
-          - name: DB_PASSWORD
-            value: "{{ immich_db_password }}"
-          - name: DB_USERNAME
-            value: postgres
-          - name: DB_DATABASE_NAME
-            value: immich
-        prune: true
-        pull_images: true
+    stacks: []
   tasks:
     - name: Ensure API token is provided
       ansible.builtin.assert:
         that: portainer_token != ""
         fail_msg: PORTAINER_API_TOKEN environment variable must be set
+      when: stacks | length > 0
 
     - name: Ensure rendered compose directory exists
       ansible.builtin.file:
@@ -62,6 +27,7 @@
       delegate_to: localhost
       become: false
       run_once: true
+      when: stacks | length > 0
 
     - name: Render compose templates for stacks
       ansible.builtin.template:
