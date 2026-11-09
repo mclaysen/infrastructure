@@ -98,7 +98,8 @@ snmp_truenas_username: snmp_truenas
 
 
 #immich
-immich_version: v3.1.0
+immich_server_version: v3.1.0@sha256:b434cb9287eea1471c9974845914d4dd328c9c2d652e446ed4930f99944f0ceb
+immich_machine_learning_version: v3.1.0@sha256:5a0839dc5303cd7215bcd2180a26aed3af41675aefb3e75e5157e9f10ad16e6e
 immich_upload_location: /home/{{ username }}/docker/immich/upload
 immich_db_data_location: /home/{{ username }}/docker/immich/db
 immich_external_photos_nfs_share: 192.168.86.200:/mnt/philbert/media/photos
