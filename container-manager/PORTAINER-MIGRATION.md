@@ -1958,6 +1958,212 @@ preparation alone is not authorization to stop or replace the live stack.
 - [ ] Confirm Portainer automation does not reclaim the stack. Preserve
   the old definition and recovery data until the migration is accepted.
 
+## Next migration: Dawarich
+
+Prepare Dawarich for native Compose, without activating it until the
+cutover is approved. The current Portainer stack and the native definition
+both use the `dawarich` project name. The working-tree Portainer playbook
+no longer deploys Dawarich; its existing stack record is not removed.
+Because the shared Compose template now uses native environment files,
+restoring the Portainer playbook entry alone is not a tested rollback.
+Save the original Portainer definition, environment and deployment settings
+securely before cutover.
+
+### Inventory and preparation
+
+- [x] Inventory the running stack without exposing credentials. On
+  2026-11-07, all five containers were running with zero restarts; Redis,
+  PostgreSQL, the app, Sidekiq and Photon reported healthy. The app health
+  endpoint returned HTTP 200, and the Dawarich and Photon Prometheus targets
+  were up.
+- [x] Record the six existing project volumes: `dawarich_dawarich_db_data`,
+  `dawarich_dawarich_shared`, `dawarich_dawarich_public`,
+  `dawarich_dawarich_watched`, `dawarich_dawarich_storage` and
+  `dawarich_photon_data`. The app and Photon use `monitoring-network`;
+  the app and Sidekiq also use `protonmail-network`. Preserve all of them.
+  Their Docker names are explicit in the Compose template; the volumes are
+  not external, so the migration guard checks that they already exist.
+- [x] Prepare `/opt/compose/dawarich` in the combined Ansible playbook,
+  with root-owned `0600` environment files and raw service secret files.
+  Existing image references remain pinned. Deployment and volume checks are
+  gated behind `dawarich_stack_enabled`, which defaults to false.
+- [x] Guard deployment against missing volumes. This is a migration guard,
+  not a clean-install workflow; it checks existence, not data integrity.
+  Synthetic tests confirmed disabled, existing and missing-volume cases.
+- [x] Render a synthetic configuration with dummy credentials and validate
+  it with Docker Compose. Check missing secrets and required variables fail
+  and raw secret values retain special characters. Images, non-secret
+  environment values (excluding the synthetic SMTP identity), mounts,
+  networks, restart policies, logging, explicit commands, ports and selected
+  runtime flags matched the running containers.
+- [x] Save the current Portainer definition, credentials and settings for
+  rollback; the user confirmed these are saved securely. Do not share secrets
+  or a resolved Compose configuration.
+- [x] Review backup and restore readiness. The Dawarich backup timer was
+  active and is scheduled daily around 03:30 with a randomized delay; its
+  script stops and starts the app and Sidekiq and backs up a database dump.
+  The user accepted the current backup; coverage of other volumes and a
+  successful restore have not been verified. Avoid overlap between the timer
+  and cutover.
+- [x] Stage the configuration with Dawarich deployment disabled. The user
+  ran the combined playbook with `ok=63`, `changed=5`, `failed=0`; both
+  the volume checks and deployment task were skipped. The combined playbook
+  also reconciles other stacks.
+- [x] Confirm all six environment files are `root:root 0600` and validate
+  the host Compose configuration. The effective credentials, SMTP identity,
+  other configured environment values, image IDs, mounts, networks, ports,
+  restart policies and logging matched the running containers without
+  printing secrets. All six volumes, all three networks and the pinned
+  images existed. The tested inherited environment matched a clean
+  environment; other shell environments can still override `.env` values.
+- [ ] Confirm the rollback procedure. The user approved the cutover and
+  accepted the backup and potential downtime. Native activation may recreate
+  containers and interrupt the app. Do not remove volumes or shared
+  networks. Do not stop or delete the Portainer record after cutover: the
+  old and new definitions use the same project name.
+
+### Cutover and verification
+
+- [x] With approval, activate through the combined Ansible playbook using
+  `-e dawarich_stack_enabled=true`. The volume guard passed for all six
+  volumes; the recap was `ok=66`, `changed=1`, `failed=0`. All five
+  containers were recreated. The volume guard does not validate backup
+  coverage or volume contents.
+- [x] Confirm native Compose labels, expected mounts, images, environment,
+  ports and networks. All five containers were healthy with zero restarts,
+  and the six volumes retained their pre-cutover creation timestamps.
+  The three network IDs stayed the same, and the HTTP health endpoint and
+  Dawarich and Photon Prometheus targets were up.
+- [x] Rerun the combined playbook with the gate enabled. It reported
+  `ok=66`, `changed=0`, `failed=0`; all five container IDs stayed the same
+  and their health checks passed afterward.
+- [ ] Verify app login and data, background jobs, Photon searches and email
+  behavior, and observe recovery before removing the default-off gate.
+  Photon logged failed health checks while starting and its Prometheus
+  target was temporarily down before returning up. PostgreSQL logged one
+  database-already-exists error for the configured database during startup;
+  its health check is now passing. These checks do not prove data integrity.
+- [ ] Investigate post-cutover performance before acceptance. The user
+  reported approximately 20-second response times across the app, later
+  improving. Host load peaked at 26.73 on four CPUs and I/O wait at about
+  88% after cutover, compared with a pre-cutover load peak of 1.16 in the
+  preceding 30 minutes. Photon's Java process read approximately 624 MiB
+  in 10 seconds, with files open in the existing Photon volume. Load and
+  I/O wait subsequently declined but disk reads remained elevated. Photon
+  logged search timeout exceptions; a test search timed out after 15 seconds
+  even though its monitoring target and container health check were up.
+  The user observed overlapping requests to the location-suggestions endpoint
+  when editing a search, followed by no results and slowdowns across other
+  containers. Dawarich logged geocoding failures and Photon logged search
+  timeout and cancellation exceptions. The installed version debounces
+  input by 300 ms but does not cancel already-started requests; its
+  geocoding service can return an empty result on an error. After the user
+  closed the map, a 10-second sample showed no physical reads by Photon,
+  but the disk was still busy: an Immich server process read approximately
+  791 MiB and had a video file open. Immich's actual job queue showed an
+  active `IntegrityChecksumFiles` job, started at 03:06 UTC, and 24 other
+  integrity jobs waiting. Its start log reported a one-hour time limit or
+  100% of assets; the job checks its stop criteria after each file. The
+  checksum job reads asset files and is consistent with the observed Immich
+  disk activity. It began after Photon search failures had already started,
+  so it does not explain the initial post-cutover slowdown. No service was
+  stopped or restarted during this investigation.
+- [ ] Confirm Portainer automation does not reclaim Dawarich, and retain the
+  old Portainer record and recovery information until retirement.
+
+## Next migration: Immich
+
+Prepare the last stack currently listed in the Portainer deployment playbook
+for native Compose. Both definitions use project `immich`; leave the old
+Portainer record alone after cutover, because stopping or deleting it could
+affect the same running project. The working-tree Portainer stack list is
+empty, but its old stack record and deployed files have not been removed.
+
+### Inventory and preparation
+
+- [x] Inventory the existing stack without exposing secrets. On
+  2026-11-08, the server, machine learning, Redis and PostgreSQL containers
+  were healthy with zero restarts. The local web and server-ping endpoints
+  returned HTTP 200.
+- [x] Record existing storage and networks. The server uses
+  `/home/ansible/docker/immich/upload` and the read-only external photo
+  library at `/mnt/truenas_shares/photos`; PostgreSQL uses
+  `/home/ansible/docker/immich/db`; machine learning uses
+  `immich_model-cache`. The server also uses the shared
+  `protonmail-network`. Preserve both networks and all data.
+- [x] Confirm the external photo path is mounted from the expected NFS
+  share and that the existing PostgreSQL `PG_VERSION` and Immich library
+  marker are present. These are presence checks, not proof of data integrity.
+- [x] Inspect Portainer's `stack.env` without displaying values. Its five
+  values are passed to both server and machine learning; the configured
+  database password and paths match the live containers. The PostgreSQL
+  credentials match the server's.
+- [x] Prepare native Compose with the observed server and machine-learning
+  image digests, the existing explicit model-cache and network names, and
+  root-owned `0600` environment files. Non-secret values are in `.env`; the
+  app and machine learning share a raw database password file, while
+  PostgreSQL uses a separate raw password file.
+  Immich deployment is gated behind `immich_stack_enabled`, default false.
+- [x] Render the upload and database bind-mount paths directly from Ansible
+  variables, the same values used by the data guards. The server and
+  machine-learning containers receive their environment values from `.env`.
+- [x] Configure Ansible to manage the existing `immich_immich-network` and
+  reference it as external in Compose. The network task preserves existing
+  container connections. Verify network identity and membership after staging.
+- [x] Add deployment guards for the existing data directories, model-cache
+  volume and expected external NFS photo mount. The directory checks follow
+  the Ghost pattern and do not check marker files. Tests covered the disabled
+  gate, existing resources, missing data and cache, and an incorrect NFS
+  source. The guards do not verify backup or data integrity and intentionally
+  do not support a clean install.
+- [x] Render and validate Compose with dummy secrets, including special
+  characters and missing-file or missing-variable failures. Its image IDs,
+  non-secret environment, mounts, networks, ports, restart policies, shared
+  memory, dependency conditions and health checks matched the live stack or
+  original Portainer configuration. Repeat template rendering changed nothing.
+  A check-mode run of the empty Portainer list skipped all deployment tasks.
+- [ ] Save the current Portainer definition, `stack.env`, credentials and
+  deployment settings securely for rollback. The original host files are
+  under `/opt/portainer/data/compose/8`; they can contain secrets. Restoring
+  the old Portainer entry alone is not a tested rollback after modifying its
+  template. Do not share resolved Compose output or credential values.
+- [ ] Review backup and restore readiness and choose a maintenance window.
+  The existing timer is active, and the backup script stops Immich server,
+  dumps PostgreSQL and backs up the upload directory. It excludes
+  regenerable thumbnails and transcoded videos and does not include the
+  separately mounted external photo library. Backup completeness and
+  restore have not been verified. Avoid overlap with the daily backup.
+- [ ] Stage the native configuration with the gate disabled, after reviewing
+  pending changes to the other stacks reconciled by the combined playbook:
+
+  ```bash
+  ansible-playbook container-manager/playbooks/process-containers.yml \
+    --limit container-VM --vault-password-file ./.vault_pass \
+    -e immich_stack_enabled=false
+  ```
+
+- [ ] Confirm the three host environment files are `root:root 0600`,
+  validate the staged Compose configuration without displaying secrets,
+  compare its effective credentials and settings with the live containers,
+  and verify the image pins and storage again. Account for shell environment
+  precedence over `.env`.
+- [ ] Confirm the app login, recent and older photos, external library,
+  uploads and backups are satisfactory; agree on downtime and a tested
+  rollback procedure before activation.
+
+### Cutover and verification
+
+- [ ] With approval, activate with `-e immich_stack_enabled=true` through
+  the combined Ansible playbook. It may recreate containers and interrupt
+  the photo service. Do not remove the data, model-cache volume or networks.
+- [ ] Verify native Compose labels, container health, existing images and
+  mounts, external library, login, photo access, upload, machine learning
+  and shared mail network. Confirm the backup timer still works and test
+  email if it is configured.
+- [ ] Rerun the native playbook to check idempotency; observe the service and
+  confirm the Portainer automation does not reclaim it before removing the
+  default-off gate. Keep the saved recovery information and Portainer record.
+
 ## Later migrations
 
 Use the website pilot's lessons to plan the other stacks separately. Stateful
