@@ -1,6 +1,6 @@
 # Infrastructure Ansible
 
-Ansible project for managing infrastructure across Portainer-managed hosts and standalone Docker VPS hosts.
+Ansible project for managing infrastructure across a container-manager host and standalone Docker VPS hosts.
 
 # General Process Used
 
@@ -29,30 +29,36 @@ Ansible project for managing infrastructure across Portainer-managed hosts and s
   ansible-galaxy collection install -r requirements.yml
   ```
 - Update inventory in [inventories/hosts.ini](inventories/hosts.ini):
-  - `[portainer_managers]` - Hosts managed via Portainer API
+  - `[container_manager]` - Host running native Compose stacks
   - `[tunnel_hosts]` - VPS hosts with direct Docker access
   
 ---
 
-## Portainer-Managed Infrastructure
+## Container-manager Infrastructure
 
-For hosts running Portainer where stacks are deployed via the Portainer API.
+Native Docker Compose stacks are deployed through Ansible on the container-manager host.
 
 ### Setup
-- Add hosts to `[portainer_managers]` in [inventories/hosts.ini](inventories/hosts.ini)
+- Configure `[container_manager]` in [inventories/hosts.ini](inventories/hosts.ini)
 - Create and encrypt secrets:
   ```bash
   cp group_vars/portainer_managers/vault.example.yml group_vars/portainer_managers/vault.yml
   ansible-vault edit group_vars/portainer_managers/vault.yml --vault-password-file ./.vault_pass
   ```
-- Add Portainer API token and stack secrets to vault
-- Configure stacks in [portainer-stacks.yml](portainer-stacks.yml)
+- Configure stack settings in [group_vars/portainer_managers/vars.yml](group_vars/portainer_managers/vars.yml)
+  and stack secrets in the encrypted vault. The directory name is retained for compatibility.
 
 ### Run
-Deploy or update Portainer stacks:
+Deploy or update native Compose stacks:
 ```bash
-ansible-playbook portainer-stacks.yml --vault-password-file ./.vault_pass
+ansible-playbook container-manager/playbooks/process-containers.yml \
+  --limit container-VM --vault-password-file ./.vault_pass \
+  -e immich_stack_enabled=true
 ```
+
+The playbook reconciles multiple stacks. Immich remains gated by default, so
+omit the extra variable only when its deployment should be skipped. Review
+pending configuration changes before running the playbook.
 
 ### NVIDIA maintenance
 
@@ -63,25 +69,11 @@ For a planned driver update, run only the NVIDIA-tagged tasks with
 prerequisites, NVIDIA driver, and container toolkit as one operation; expect a
 Docker restart and, when packages change, a reboot.
 
-### Stacks configuration
-`stacks` is a list of compose deployments. Example entry:
-```yaml
-stacks:
-  - name: myapp
-    file: stacks/myapp.yml            # or template: stacks/myapp.yml.j2
-    stack_type: standalone  # or swarm
-    endpoint_id: 1
-    env:
-      - name: LOG_LEVEL
-        value: info
-    prune: true            # remove orphaned services
-    pull_images: false     # set true to always pull
-```
-
 ### Secrets and templated stacks
 - Keep secrets in an encrypted Vault file
-- Use Jinja templates for stacks that need secrets. Example: [stacks/jellystat.yml.j2](stacks/jellystat.yml.j2)
-- The play renders templates to `/tmp/portainer-stacks/<name>.yml` on the control node, deploys them, then deletes the rendered files
+- Compose and environment templates live in [container-manager/stacks](container-manager/stacks)
+- Environment files are rendered as `root:root` with mode `0600`. Most stack
+  secrets use raw service-specific environment files; Cloudflare uses `.env`.
 - Avoid `--diff` when deploying secret-bearing templates
 
 ---

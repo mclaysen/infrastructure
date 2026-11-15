@@ -1,0 +1,55 @@
+---
+- name: Create group for nas Fileshare
+  ansible.builtin.group:
+    name: "{{ fileshare_group_name }}"
+    state: present
+    gid: "{{ fileshare_group_gid }}"
+
+- name: Add user to nas fileshare group
+  ansible.builtin.user:
+    name: "{{ username }}"
+    groups: "{{ fileshare_group_name }}"
+    append: true
+
+- name: Create base NFS mount directory
+  ansible.builtin.file:
+    path: /mnt/truenas_shares
+    state: directory
+    mode: '0755'
+
+- name: Create mountpoint for home videos
+  ansible.builtin.file:
+    path: "{{ home_videos_mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: Create mountpoint for movies
+  ansible.builtin.file:
+    path: "{{ movies_mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: Mount the file share for home videos
+  ansible.posix.mount:
+    src: "{{ home_videos_nfs_share }}"
+    path: "{{ home_videos_mount_point }}"
+    fstype: nfs
+    opts: rw
+    state: mounted
+
+- name: Mount the file share for movies
+  ansible.posix.mount:
+    src: "{{ movies_nfs_share }}"
+    path: "{{ movies_mount_point }}"
+    fstype: nfs
+    opts: rw
+    state: mounted
+
+- name: Mount the file share for Immich external photos
+  ansible.posix.mount:
+    src: "{{ immich_external_photos_nfs_share }}"
+    path: "{{ immich_external_photos_mount_point }}"
+    fstype: nfs
+    opts: ro
+    state: mounted
+  when: immich_external_photos_nfs_share | default('') | length > 0

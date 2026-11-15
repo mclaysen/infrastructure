@@ -1,5 +1,8 @@
 # Portainer migration: website pilot
 
+The website pilot and earlier status notes below are historical. For the
+current retirement plan, see [Retire Portainer](#retire-portainer).
+
 ## Goal and scope
 
 Move the `mclaysen_website` stack from Portainer to native Docker Compose,
@@ -688,9 +691,8 @@ The user confirmed both expected NFSv4 mounts:
   ```
 
   The reported sources match the configured shares. A missing mount must block
-  cutover rather than cause an empty library scan. The existing NFS setup lives in
-  [`portainer_setup.yml`](tasks/portainer_setup.yml); preserve it when
-  Portainer is eventually removed.
+  cutover rather than cause an empty library scan. The NFS setup now lives in
+  [`fileshare_setup.yml`](tasks/fileshare_setup.yml).
 - [x] Verify Jellyfin can read and play media from the mounted shares. The user
   reports being able to view media before cutover.
 - [x] Confirm backup readiness for the active Jellyfin configuration volume
@@ -2122,19 +2124,22 @@ empty, but its old stack record and deployed files have not been removed.
   memory, dependency conditions and health checks matched the live stack or
   original Portainer configuration. Repeat template rendering changed nothing.
   A check-mode run of the empty Portainer list skipped all deployment tasks.
-- [ ] Save the current Portainer definition, `stack.env`, credentials and
-  deployment settings securely for rollback. The original host files are
+- [x] Save the current Portainer definition, `stack.env`, credentials and
+  deployment settings securely for rollback. The user confirmed these are
+  saved securely. The original host files are
   under `/opt/portainer/data/compose/8`; they can contain secrets. Restoring
   the old Portainer entry alone is not a tested rollback after modifying its
   template. Do not share resolved Compose output or credential values.
-- [ ] Review backup and restore readiness and choose a maintenance window.
+- [x] Review backup and restore readiness and choose a maintenance window.
   The existing timer is active, and the backup script stops Immich server,
   dumps PostgreSQL and backs up the upload directory. It excludes
   regenerable thumbnails and transcoded videos and does not include the
   separately mounted external photo library. Backup completeness and
-  restore have not been verified. Avoid overlap with the daily backup.
-- [ ] Stage the native configuration with the gate disabled, after reviewing
-  pending changes to the other stacks reconciled by the combined playbook:
+  restore have not been verified. The user accepted the current backups and
+  potential downtime. Avoid overlap with the daily backup.
+- [x] Stage the native configuration with the gate disabled. The user ran
+  the combined playbook with `ok=67`, `changed=5`, `failed=0`; the Immich
+  guards and deployment were skipped:
 
   ```bash
   ansible-playbook container-manager/playbooks/process-containers.yml \
@@ -2142,34 +2147,194 @@ empty, but its old stack record and deployed files have not been removed.
     -e immich_stack_enabled=false
   ```
 
-- [ ] Confirm the three host environment files are `root:root 0600`,
-  validate the staged Compose configuration without displaying secrets,
-  compare its effective credentials and settings with the live containers,
-  and verify the image pins and storage again. Account for shell environment
-  precedence over `.env`.
+- [x] Confirm the three host environment files are `root:root 0600` and
+  validate the staged Compose configuration without displaying secrets. The
+  effective credentials and configured non-secret environment values matched
+  the running containers, as did image IDs, mounts, networks, ports, restart
+  policies, dependencies and health checks. The model-cache volume and
+  expected photo NFS mount were present; both network IDs and Immich network
+  membership were unchanged. All four Portainer-managed containers remained
+  healthy. The tested inherited environment matched a clean environment;
+  other shell environments can still override `.env` values.
 - [ ] Confirm the app login, recent and older photos, external library,
   uploads and backups are satisfactory; agree on downtime and a tested
   rollback procedure before activation.
 
 ### Cutover and verification
 
-- [ ] With approval, activate with `-e immich_stack_enabled=true` through
-  the combined Ansible playbook. It may recreate containers and interrupt
-  the photo service. Do not remove the data, model-cache volume or networks.
-- [ ] Verify native Compose labels, container health, existing images and
-  mounts, external library, login, photo access, upload, machine learning
-  and shared mail network. Confirm the backup timer still works and test
-  email if it is configured.
-- [ ] Rerun the native playbook to check idempotency; observe the service and
-  confirm the Portainer automation does not reclaim it before removing the
-  default-off gate. Keep the saved recovery information and Portainer record.
+- [x] With approval, activate with `-e immich_stack_enabled=true` through
+  the combined Ansible playbook. All data, model-cache and NFS guards passed;
+  the recap was `ok=74`, `changed=1`, `failed=0`. All four containers were
+  recreated.
+- [x] Confirm native Compose labels, healthy containers, image IDs, effective
+  environment, ports, bind mounts, cache and networks. Both network IDs and
+  the upload and database directory device/inode identities remained the
+  same; the model-cache volume retained its creation timestamp. The external
+  library NFS mount, local ping and web endpoints, and public web endpoint
+  passed. These checks do not prove data integrity.
+- [x] Rerun the native playbook with the gate enabled. The recap was `ok=74`,
+  `changed=0`, `failed=0`; container IDs, network IDs and health remained
+  unchanged.
+- [x] Confirm login, existing photos and external-library access. The user
+  reported these work after cutover.
+- [ ] Confirm uploads, machine learning and email if configured. Confirm the backup
+  timer works after cutover, observe the service and confirm Portainer
+  automation does not reclaim it before removing the default-off gate.
+  Keep the saved recovery information and Portainer record.
 
-## Later migrations
+## Retire Portainer
 
-Use the website pilot's lessons to plan the other stacks separately. Stateful
-services will require verified backups, volume and bind-mount preservation,
-Portainer environment-variable migration, and shared-network checks. Compose
-interpolation `.env` files and service `env_file` entries are different:
-preserve or deliberately replace both where used, including Immich's
-`stack.env`. Beszel, Portainer agent removal, and eventual Portainer retirement
-are outside this pilot.
+On 2026-11-14, the user approved removing the local Portainer server and
+agent while retaining `/opt/portainer/data` and its old stack files. Both
+containers were stopped and removed. The native stacks remain running; no
+Portainer stack records were stopped or deleted individually. Several old
+records use the same Compose project names as the native deployments, so
+restoring Portainer and acting on those records could affect live containers.
+
+### 1. Confirm migration and recovery readiness
+
+- [x] Finish or explicitly accept the remaining checks above, including
+  Immich uploads and backups, Dawarich's Photon search performance, and the
+  monitoring Loki/Alloy recovery warnings. The user accepted proceeding
+  with these checks still open; they remain unresolved.
+- [ ] Confirm the normal native deployment workflow. The separate
+  [`process-containers.yml`](playbooks/process-containers.yml) playbook
+  reconciles migrated stacks, but it is **not** imported by
+  [`container-manager.yml`](../container-manager.yml). Immich currently
+  requires `-e immich_stack_enabled=true`; otherwise its deployment and
+  guards are skipped. Decide whether to retain or remove that gate after
+  acceptance. A run can reconcile other stacks and restart Docker if its
+  daemon configuration changes; review pending changes first.
+- [x] Recheck live Compose project labels, config-file labels, health,
+  mounts and shared networks. On 2026-11-14, the running native projects
+  were `cloudflared`, `dawarich`, `ghost`, `immich`, `jellyfin`, `jellystat`,
+  `mclaysen_website`, `monitoring`, `newt`, `protonmail_bridge` and
+  `smarthome`, using `/opt/compose/<project>/compose.yml`. The separate
+  `portainer` project used `/opt/portainer/docker-compose.yml`; the
+  standalone `portainer_agent` had no Compose project label. Recheck rather
+  than assuming those observations remain current.
+- [ ] Before losing the UI, inspect **all** Portainer endpoints, stacks,
+  standalone containers, schedules, and any Git or webhook deployments.
+  The empty stack list in [`portainer-stacks.yml`](playbooks/portainer-stacks.yml)
+  only establishes what this repository currently asks Portainer to deploy;
+  it does not prove that other endpoints or UI-managed workloads are migrated.
+  Identify any remote agents and their owners. Leave any still-used endpoint
+  or agent in place until its workloads and automation are accounted for.
+  A read-only API inventory found one endpoint, `local`, and 11 stack records.
+  All running application containers used native Compose files; no remote
+  endpoints were reported. Portainer schedules, webhooks and external clients
+  were not independently verified before removal.
+- [ ] Save the Portainer configuration and recovery material securely,
+  including its data directory, stack definitions, environment files,
+  endpoint settings and credentials as needed. They may contain secrets:
+  use restricted storage and do not paste them into chat or the repository.
+  A consistent Portainer-data backup should be taken after it is stopped;
+  decide backup coverage and test recovery before permanent removal.
+- [ ] Review backup coverage for stateful applications and shared storage.
+  Immich's external photo library is outside its existing backup script;
+  the script backs up its database dump and upload directory but excludes
+  regenerable thumbnails and transcoded videos. A successful restore and
+  complete coverage have not been verified. Do not equate container health
+  or a Portainer-data backup with application-data recovery.
+
+### 2. Prevent Ansible from recreating Portainer
+
+- [x] Update [`container-manager.yml`](../container-manager.yml) and
+  [`fileshare_setup.yml`](tasks/fileshare_setup.yml) so normal runs no longer
+  deploy Portainer, wait for or initialize its UI, pull the agent image, or
+  start the agent. Preserve the unrelated fileshare group, user and NFS
+  mount tasks in the same setup file; Jellyfin and Immich depend on those
+  mounts. Do not remove the whole file without relocating or retaining them.
+- [x] Remove or retire the import of
+  [`portainer-stacks.yml`](playbooks/portainer-stacks.yml) once all Portainer
+  stack automation is no longer needed. Its list is currently empty. Keep
+  the separate Pangolin blueprint, Grafana and backup plays unless their own
+  functionality has been replaced; they are not Portainer stack deployment.
+- [ ] Review the Portainer-only variables, credentials, collection and
+  inventory entries before removing them. The
+  [`group_vars/portainer_managers`](../group_vars/portainer_managers) files
+  also supply native-stack and backup variables: do **not** delete or rename
+  that directory merely because its name mentions Portainer. Check references
+  before removing `bgtor.portainer` from
+  [`requirements.yml`](../requirements.yml), any Vault entries, or inventory.
+- [ ] Update [`README.md`](../README.md) to document the native deployment
+  command and remaining prerequisites rather than the old Portainer workflow.
+  Run syntax checks and inspect the resulting task list; use targeted
+  check-mode tests where practical. The full `container-manager.yml` also
+  manages packages, Docker and mounts, so do not run it against production
+  without reviewing its effects. Confirm a subsequent approved normal run
+  cannot recreate Portainer or its agent. The README and task list were
+  updated and syntax-checked; the full playbook has not been run after removal.
+  A targeted fileshare check-mode run passed but reported two existing
+  mountpoint directory tasks as changed; it made no modifications.
+
+### 3. Stop only Portainer and observe
+
+- [x] Recheck names, mounts and project labels. The observed `portainer`
+  container bind-mounts `/opt/portainer/data` and the Docker socket; the
+  standalone `portainer_agent` bind-mounts the Docker socket and Docker
+  volume directory. Both use `restart: always`. `portainer_network` had
+  only Portainer attached when inspected; verify current membership.
+- [x] With approval and after disabling Ansible recreation, stop only those
+  two containers on the container-manager host:
+
+  ```bash
+  sudo docker stop --time 30 portainer
+  sudo docker stop --time 30 portainer_agent
+  ```
+
+  The containers were subsequently removed with Ansible; the Portainer
+  data directory, migrated stacks, volumes and networks were retained.
+- [ ] Verify the two containers are stopped and all native projects remain
+  running and healthy. Check representative services, Immich login and
+  photos, Ghost and mail, Dawarich and Photon, monitoring targets, the
+  shared networks, and backup timers. Capture and compare container IDs,
+  volume identities and network IDs as appropriate. Do not run broad Docker
+  cleanup or `docker compose down -v`. All 26 application container IDs,
+  states and reported health, 18 volume identities and shared network IDs
+  matched the pre-stop baseline; interactive application checks remain open.
+- [ ] Create or verify a secure, consistent backup of the stopped Portainer
+  data. `/opt/portainer/data` remains on the host; backup and restore are
+  unverified. Since the containers have been removed, `docker start` cannot
+  restore them. See the rollback step below.
+
+### 4. Remove Portainer and its integrations
+
+- [x] With user approval, use Ansible to remove **only** the two verified
+  local containers, retaining volumes:
+
+  ```bash
+  ansible container-VM --become -m community.docker.docker_container \
+    -a 'name=portainer state=absent keep_volumes=true'
+  ansible container-VM --become -m community.docker.docker_container \
+    -a 'name=portainer_agent state=absent keep_volumes=true'
+  ```
+
+  The Portainer data is a host bind mount and is not removed by these
+  commands. A subsequent check-mode run reported `changed=false` for both.
+  The API inventory found no remote endpoints.
+- [ ] Remove or repurpose the old Portainer UI route in
+  [`group_vars/proxy_hosts/vars.yml`](../group_vars/proxy_hosts/vars.yml)
+  and remove its blackbox probe from
+  [`prometheus_config.yml.j2`](stacks/prometheus_config.yml.j2), if the
+  hostname is no longer needed. Review any external DNS, tunnel, bookmarks,
+  alerts and other integrations before changing them. Apply proxy and
+  monitoring changes through their normal Ansible workflows. After removal,
+  the user chose to keep both integrations for now. The Portainer blackbox
+  probe reports failure because the service is no longer running.
+- [ ] Verify the two containers are absent, expected Portainer ports are no
+  longer listening, native projects still work and future Ansible runs do not
+  recreate Portainer. Verify both backup timers and the external NFS mount.
+  Preserve `/opt/portainer/data`, its Compose file, images and
+  `portainer_network` until a separately approved cleanup and retention
+  decision; inspect network membership before any network removal. Both
+  containers were absent, ports 8000, 9000, 9001 and 9443 had no listeners,
+  backup timers and NFS mounts were active, and Immich, Dawarich and
+  Prometheus health endpoints returned HTTP 200. Native container IDs and
+  shared resources matched the pre-removal inventory. A full normal Ansible
+  run has not yet been performed.
+- [ ] If rollback is needed after removal, restore Portainer's Ansible
+  provisioning and the preserved data, then verify its UI and agent before
+  using them. Restoring old Portainer stack definitions does **not** safely
+  transfer ownership by itself; plan and approve any application rollback
+  separately.
