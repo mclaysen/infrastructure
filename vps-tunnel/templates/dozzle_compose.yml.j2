@@ -1,0 +1,27 @@
+services:
+  dozzle:
+    image: amir20/dozzle:{{ dozzle_version }}
+    restart: unless-stopped
+    environment:
+      - DOZZLE_AUTH_PROVIDER=none
+    volumes:
+      - dozzle_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - container-manager-network
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 3s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+  gerbil:
+    networks:
+      - default
+      - container-manager-network
+volumes:
+    dozzle_data:
+        name: dozzle_data
+networks:
+    container-manager-network:
+        name: container-manager-network

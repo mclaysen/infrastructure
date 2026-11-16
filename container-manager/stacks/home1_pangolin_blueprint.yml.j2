@@ -104,6 +104,23 @@ public-resources:
           timeout: 5
           unhealthy-interval: 15
           enabled: true
+  container-manager:
+    name: Container Manager
+    protocol: http
+    full-domain: container-manager.{{ domain }}
+    host-header: container-manager.{{ domain }}
+    tls-server-name: container-manager.{{ domain }}
+    targets:
+      - site: vps-local
+        hostname: dozzle
+        method: http
+        port: 8080
+    auth:
+      sso-enabled: true
+      sso-roles:
+        - Member
+      sso-users:
+        - "{{ email_address }}"
   alloy:
     name: Alloy
     protocol: http
