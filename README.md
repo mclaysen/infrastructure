@@ -74,6 +74,11 @@ Docker restart and, when packages change, a reboot.
 - Compose and environment templates live in [container-manager/stacks](container-manager/stacks)
 - Environment files are rendered as `root:root` with mode `0600`. Most stack
   secrets use raw service-specific environment files; Cloudflare uses `.env`.
+- Monitoring's Dozzle agent uses a separate environment file with the standard
+  Compose parser for multiline PEM values. In the encrypted vault,
+  `dozzle_cert_pem` must contain the complete certificate, and
+  `dozzle_private_key` must contain a PKCS#8 private key in PEM form or its
+  base64 body.
 - Avoid `--diff` when deploying secret-bearing templates
 
 ---

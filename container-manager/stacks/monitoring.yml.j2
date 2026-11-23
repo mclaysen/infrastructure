@@ -97,6 +97,25 @@ services:
       - {{ blackbox_exporter_config_path }}:/etc/blackbox_exporter/config.yml:ro
     networks:
       - monitoring-network
+  dozzle-agent:
+    image: amir20/dozzle:{{ dozzle_version }}
+    command: agent
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 5s
+      retries: 5
+      start_period: 5s
+      start_interval: 5s
+    env_file:
+      - ./monitoring.dozzle.cert.env
+    environment:
+      - DOZZLE_ENABLE_ACTIONS=${DOZZLE_ENABLE_ACTIONS}
+      - DOZZLE_ENABLE_SHELL=${DOZZLE_ENABLE_SHELL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - pangolin_network
   alloy:
     image: grafana/alloy:{{ alloy_version }}
     container_name: alloy
@@ -131,4 +150,6 @@ volumes:
 networks:
   monitoring-network:
     name: monitoring-network
+    external: true
+  pangolin_network:
     external: true

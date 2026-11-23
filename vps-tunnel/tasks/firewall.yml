@@ -42,7 +42,7 @@
 - name: Allow Docker networks to access host
   ansible.builtin.firewalld:
     zone: trusted
-    source: "172.16.0.0/12"
+    source: 172.16.0.0/12
     permanent: true
     state: enabled
     immediate: true

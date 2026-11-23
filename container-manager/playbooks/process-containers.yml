@@ -69,6 +69,18 @@
         - value: "{{ immich_db_password }}"
       no_log: true
 
+    - name: Validate Dozzle PEM values
+      ansible.builtin.assert:
+        that:
+          - dozzle_cert_pem is string
+          - dozzle_cert_pem | trim is match('^-----BEGIN CERTIFICATE-----\r?\n[A-Za-z0-9+/=\r\n]+\r?\n-----END CERTIFICATE-----$')
+          - dozzle_private_key is string
+          - >-
+            dozzle_private_key | trim is match('^[A-Za-z0-9+/=\r\n]+$') or
+            dozzle_private_key | trim is match('^-----BEGIN PRIVATE KEY-----\r?\n[A-Za-z0-9+/=\r\n]+\r?\n-----END PRIVATE KEY-----$')
+        fail_msg: Dozzle requires a PEM certificate and a PKCS#8 private key or its base64 body.
+      no_log: true
+
     - name: Create environment files
       ansible.builtin.template:
         src: "{{ item.src }}"
@@ -106,6 +118,7 @@
         - {src: ../stacks/immich.env.j2, dest: /opt/compose/immich/.env }
         - {src: ../stacks/immich.database-pass.env.j2, dest: /opt/compose/immich/database-pass.env }
         - {src: ../stacks/immich.postgres-pass.env.j2, dest: /opt/compose/immich/postgres-pass.env }
+        - {src: ../stacks/monitoring.dozzle.cert.env.j2, dest: /opt/compose/monitoring/monitoring.dozzle.cert.env }
 
     - name: Create smarthome config directory
       ansible.builtin.file:

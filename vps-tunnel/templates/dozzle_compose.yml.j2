@@ -4,9 +4,15 @@ services:
     restart: unless-stopped
     environment:
       - DOZZLE_AUTH_PROVIDER=none
+      - DOZZLE_REMOTE_AGENT=gerbil:7007
     volumes:
       - dozzle_data:/data
       - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - source: cert
+        target: /dozzle_cert.pem
+      - source: key
+        target: /dozzle_key.pem
     networks:
       - container-manager-network
     healthcheck:
@@ -19,6 +25,11 @@ services:
     networks:
       - default
       - container-manager-network
+secrets:
+  cert:
+    file: /home/{{ deploy_user_name }}/docker/config/dozzle/cert.pem
+  key:
+    file: /home/{{ deploy_user_name }}/docker/config/dozzle/key.pem
 volumes:
     dozzle_data:
         name: dozzle_data

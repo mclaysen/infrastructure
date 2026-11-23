@@ -74,6 +74,7 @@ homebridge_version: '2026-06-24'
 homebridge_config_dir: /home/{{ username }}/docker/smarthome/homebridge
 
 #monitoring stack
+dozzle_version: v11.4.3@sha256:244f218c876d6ed766277e71a537f34bfb2c01829e1927737e3673a8327deeb8
 grafana_version: 12.3.1@sha256:703b4a3aff457041dcbd15bf36dbc8bb83cb513b72b0912056985712be4c01bd
 unpoller_version: v2.33.0@sha256:654764c5202f936601aa66a9892783c9d0fca13eba619ed170f6e921623dbc51
 prometheus_version: v3.9.1@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702
