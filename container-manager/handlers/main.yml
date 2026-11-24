@@ -19,3 +19,19 @@
     name: grafana
     state: started
     restart: true
+
+- name: Recreate Prometheus
+  community.docker.docker_compose_v2:
+    project_src: /opt/compose/monitoring
+    project_name: monitoring
+    services: [prometheus]
+    dependencies: false
+    recreate: always
+
+- name: Recreate SNMP exporter
+  community.docker.docker_compose_v2:
+    project_src: /opt/compose/monitoring
+    project_name: monitoring
+    services: [snmp_exporter]
+    dependencies: false
+    recreate: always
