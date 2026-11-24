@@ -4,12 +4,12 @@
 auths:
   truenas_v3:
     version: 3
-    username: "REPLACE_WITH_TRUENAS_SNMPV3_USER"
+    username: REPLACE_WITH_TRUENAS_SNMPV3_USER
     security_level: authPriv
-    password: "REPLACE_WITH_AUTH_PASSWORD"
+    password: REPLACE_WITH_AUTH_PASSWORD
     auth_protocol: SHA
     priv_protocol: AES
-    priv_password: "REPLACE_WITH_PRIVACY_PASSWORD"
+    priv_password: REPLACE_WITH_PRIVACY_PASSWORD
 
 modules:
   truenas:
