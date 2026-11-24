@@ -1,14 +1,5 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_INFLUXDB",
-      "label": "InfluxDB",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "influxdb",
-      "pluginName": "InfluxDB"
-    }
-  ],
+  "__inputs": [],
   "__requires": [
     {
       "type": "panel",
@@ -24,8 +15,8 @@
     },
     {
       "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
+      "id": "prometheus",
+      "name": "Prometheus",
       "version": "1.0.0"
     },
     {
@@ -70,7 +61,7 @@
       }
     ]
   },
-  "description": "Ubiquiti Networks UniFi AP Dashboard. (grafana.com rev 1)",
+  "description": "UniFi access point SNMP metrics from Prometheus. CPU, memory, load and device SNMP-message panels are omitted because the AP scrape does not currently return those metrics.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "gnetId": 25575,
@@ -81,8 +72,8 @@
   "panels": [
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -128,10 +119,15 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiApSystemModel\" or r[\"_field\"] == \"unifiApSystemVersion\" or r[\"_field\"] == \"sysDescr\" or r[\"_field\"] == \"sysContact\" or r[\"_field\"] == \"sysLocation\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> last()\n  |> pivot(rowKey: [\"source\", \"sysName\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"source\", \"sysName\", \"unifiApSystemModel\", \"unifiApSystemVersion\", \"sysDescr\", \"sysContact\", \"sysLocation\"])\n  |> group()",
+          "editorMode": "code",
+          "expr": "up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} * on(instance) group_left(sysName) (sysName{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(unifiApSystemModel) (unifiApSystemModel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(unifiApSystemVersion) (unifiApSystemVersion{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysDescr) (sysDescr{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysContact) (sysContact{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysLocation) (sysLocation{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -141,24 +137,28 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": {},
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "job": true
+            },
             "indexByName": {
-              "source": 0,
-              "sysContact": 5,
-              "sysDescr": 4,
-              "sysLocation": 6,
+              "instance": 0,
               "sysName": 1,
               "unifiApSystemModel": 2,
-              "unifiApSystemVersion": 3
+              "unifiApSystemVersion": 3,
+              "sysDescr": 4,
+              "sysContact": 5,
+              "sysLocation": 6
             },
             "renameByName": {
-              "source": "IP",
-              "sysContact": "Contact",
-              "sysDescr": "Description",
-              "sysLocation": "Location",
+              "instance": "IP",
               "sysName": "Name",
               "unifiApSystemModel": "Model",
-              "unifiApSystemVersion": "Version"
+              "unifiApSystemVersion": "Version",
+              "sysDescr": "Description",
+              "sysContact": "Contact",
+              "sysLocation": "Location"
             }
           }
         }
@@ -166,13 +166,13 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "displayName": "${__field.labels.sysName}",
+          "displayName": "${__field.labels.instance}",
           "unit": "s",
           "decimals": 0,
           "mappings": [
@@ -237,10 +237,15 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"sysUpTime\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> last()\n  |> map(fn: (r) => ({r with _value: float(v: r._value) / 100.0}))\n  |> keep(columns: [\"_time\", \"_value\", \"source\", \"sysName\"])",
+          "editorMode": "code",
+          "expr": "sysUpTime{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} / 100",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -249,8 +254,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -279,72 +284,7 @@
             "minWidth": 50
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Radio"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "na": {
-                        "index": 0,
-                        "text": "5 GHz (na)"
-                      },
-                      "ng": {
-                        "index": 1,
-                        "text": "2.4 GHz (ng)"
-                      }
-                    },
-                    "type": "value"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Tx Power"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "dBm"
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "dark-green",
-                      "value": 0
-                    },
-                    {
-                      "color": "dark-orange",
-                      "value": 12
-                    },
-                    {
-                      "color": "dark-red",
-                      "value": 18
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 5,
@@ -361,35 +301,42 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapChannel\" or r[\"_field\"] == \"unifiVapExtChannel\" or r[\"_field\"] == \"unifiVapTxPower\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> last()\n  |> pivot(rowKey: [\"source\", \"unifiVapRadio\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"source\", \"unifiVapRadio\", \"unifiVapChannel\", \"unifiVapExtChannel\", \"unifiVapTxPower\"])\n  |> unique(column: \"unifiVapRadio\")",
+          "editorMode": "code",
+          "expr": "sum by (instance, unifiVapName, unifiVapIndex, unifiVapEssId, metric) (label_replace(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Channel\", \"__name__\", \".*\") or label_replace(unifiVapExtChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Extended channel\", \"__name__\", \".*\") or label_replace(unifiVapTxPower{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Tx power (dBm)\", \"__name__\", \".*\"))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Radios",
+      "title": "VAP channels and power",
       "type": "table",
       "transformations": [
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "source": false
+              "Time": true
             },
             "indexByName": {
-              "source": 0,
-              "unifiVapChannel": 2,
-              "unifiVapExtChannel": 3,
-              "unifiVapRadio": 1,
-              "unifiVapTxPower": 4
+              "instance": 0,
+              "unifiVapName": 1,
+              "unifiVapIndex": 2,
+              "unifiVapEssId": 3,
+              "metric": 4,
+              "Value": 5
             },
             "renameByName": {
-              "source": "IP",
-              "unifiVapChannel": "Channel",
-              "unifiVapExtChannel": "Ext",
-              "unifiVapRadio": "Radio",
-              "unifiVapTxPower": "Tx Power"
+              "instance": "IP",
+              "unifiVapName": "VAP",
+              "unifiVapIndex": "Index",
+              "unifiVapEssId": "SSID",
+              "metric": "Metric",
+              "Value": "Value"
             }
           }
         }
@@ -397,8 +344,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -431,20 +378,7 @@
             "mode": "thresholds"
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "unifiRadioCuTotal"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiRadioRadio}"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 5,
@@ -481,10 +415,15 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiRadioCuTotal\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiRadioRadio\"] =~ /${uapradio:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "editorMode": "code",
+          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiRadioName}}",
           "refId": "A"
         }
       ],
@@ -493,461 +432,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.laNames}"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "min"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.load\")\n  |> filter(fn: (r) => r[\"_field\"] == \"laLoadInt\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> map(fn: (r) => ({r with _value: float(v: r._value) / 100.0}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
-          "refId": "A"
-        }
-      ],
-      "title": "CPU Load Average",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "green"
-              },
-              {
-                "value": 80,
-                "color": "red"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} cpu${__field.labels.index}"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 10
-      },
-      "id": 49,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "min"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.cpu\")\n  |> filter(fn: (r) => r[\"_field\"] == \"hrProcessorLoad\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
-          "refId": "A"
-        }
-      ],
-      "title": "Processor Load",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.name}"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 17
-      },
-      "id": 50,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "min"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"memBuffer\" or r[\"_field\"] == \"memCached\" or r[\"_field\"] == \"memShared\" or r[\"_field\"] == \"memTotalFree\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> map(fn: (r) => ({r with _value: r._value * 1024}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
-          "refId": "A"
-        }
-      ],
-      "title": "Memory Distribution",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "decimals": 3,
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "transparent"
-              },
-              {
-                "value": 0.9,
-                "color": "orange"
-              },
-              {
-                "value": 0.95,
-                "color": "red"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} memory used"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 17
-      },
-      "id": 47,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "min"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"memTotalReal\" or r[\"_field\"] == \"memAvailReal\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> pivot(rowKey: [\"_time\", \"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({_time: r._time, source: r.source, _value: (float(v: r.memTotalReal) - float(v: r.memAvailReal)) / float(v: r.memTotalReal), _field: \"used\"}))",
-          "refId": "A"
-        }
-      ],
-      "title": "Memory Utilization",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1000,26 +486,13 @@
             }
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: ${__field.labels.unifiVapEssId} (${__field.labels.unifiVapRadio})"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 16,
         "x": 0,
-        "y": 24
+        "y": 10
       },
       "id": 19,
       "options": {
@@ -1043,10 +516,15 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapNumStations\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "editorMode": "code",
+          "expr": "unifiVapNumStations{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}} {{unifiVapEssId}}",
           "refId": "A"
         }
       ],
@@ -1055,8 +533,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1109,26 +587,13 @@
             }
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiRadioRadio} (${__field.labels.unifiRadioName})"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 24
+        "y": 10
       },
       "id": 23,
       "options": {
@@ -1152,10 +617,15 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiRadioOtherBss\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiRadioRadio\"] =~ /${uapradio:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: last, createEmpty: false)\n  |> yield(name: \"last\")",
+          "editorMode": "code",
+          "expr": "unifiRadioOtherBss{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiRadioName}}",
           "refId": "A"
         }
       ],
@@ -1164,8 +634,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1222,26 +692,13 @@
             }
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiRadioRadio}: ${__field.name}"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 17
       },
       "id": 8,
       "options": {
@@ -1265,11 +722,42 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiRadioCuSelfRx\" or r[\"_field\"] == \"unifiRadioCuSelfTx\" or r[\"_field\"] == \"unifiRadioCuTotal\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiRadioRadio\"] =~ /${uapradio:regex}/)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "editorMode": "code",
+          "expr": "unifiRadioCuSelfRx{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiRadioName}}: Receive",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "unifiRadioCuSelfTx{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiRadioName}}: Transmit",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiRadioName}}: Total",
+          "refId": "C"
         }
       ],
       "title": "WiFi (802.11) Channel Utilization",
@@ -1277,8 +765,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1336,25 +824,9 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: In"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
               "options": "B"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -1367,7 +839,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 24
       },
       "id": 20,
       "options": {
@@ -1393,18 +865,28 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapRxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "8 * rate(unifiVapRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: In",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapTxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "8 * rate(unifiVapTxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Out",
           "refId": "B"
         }
       ],
@@ -1413,8 +895,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1471,25 +953,9 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: In"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
               "options": "B"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -1502,7 +968,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 31
       },
       "id": 22,
       "options": {
@@ -1526,18 +992,28 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapRxPackets\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "rate(unifiVapRxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: In",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapTxPackets\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "rate(unifiVapTxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Out",
           "refId": "B"
         }
       ],
@@ -1546,8 +1022,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1604,25 +1080,33 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
+              "options": "E"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: ${__field.name}: In"
+                "id": "custom.transform",
+                "value": "negative-Y"
               }
             ]
           },
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "B"
+              "options": "F"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiVapName}: ${__field.name}: Out"
-              },
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "G"
+            },
+            "properties": [
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -1635,7 +1119,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 38
       },
       "id": 21,
       "options": {
@@ -1659,19 +1143,94 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapRxDropped\" or r[\"_field\"] == \"unifiVapRxErrors\" or r[\"_field\"] == \"unifiVapRxCrypts\" or r[\"_field\"] == \"unifiVapRxFrags\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "rate(unifiVapRxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Rx dropped",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiVapTxDropped\" or r[\"_field\"] == \"unifiVapTxErrors\" or r[\"_field\"] == \"unifiVapTxRetries\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiVapName\"] =~ /${uapvap:regex}/ and r[\"unifiVapRadio\"] =~ /${uapradio:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "rate(unifiVapRxErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Rx errors",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiVapRxCrypts{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Rx crypts",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiVapRxFrags{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Rx fragments",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiVapTxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Tx dropped",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiVapTxErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Tx errors",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiVapTxRetries{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiVapName}}: Tx retries",
+          "refId": "G"
         }
       ],
       "title": "WiFi (802.11) Drops/Errors",
@@ -1679,8 +1238,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1737,25 +1296,9 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: In"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
               "options": "B"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -1768,7 +1311,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 45
       },
       "id": 5,
       "options": {
@@ -1792,18 +1335,28 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfRxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "8 * rate(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: In",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfTxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({r with _value: r._value * 8.0}))\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "8 * rate(unifiIfTxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Out",
           "refId": "B"
         }
       ],
@@ -1812,8 +1365,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -1870,25 +1423,9 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
+              "options": "C"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: ${__field.name}: In"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -1901,7 +1438,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 52
       },
       "id": 24,
       "options": {
@@ -1925,19 +1462,42 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfRxPackets\" or r[\"_field\"] == \"unifiIfRxMulticast\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "rate(unifiIfRxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Rx packets",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfTxPackets\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "rate(unifiIfRxMulticast{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Rx multicast",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiIfTxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Tx packets",
+          "refId": "C"
         }
       ],
       "title": "Ethernet (802.3) Traffic Distribution",
@@ -1945,8 +1505,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -2003,25 +1563,21 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
+              "options": "C"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: ${__field.name}: In"
+                "id": "custom.transform",
+                "value": "negative-Y"
               }
             ]
           },
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "B"
+              "options": "D"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.unifiIfName}: ${__field.name}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -2034,7 +1590,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 59
       },
       "id": 6,
       "options": {
@@ -2058,19 +1614,55 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfRxDropped\" or r[\"_field\"] == \"unifiIfRxError\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "rate(unifiIfRxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Rx dropped",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"unifiIfTxDropped\" or r[\"_field\"] == \"unifiIfTxError\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and r[\"unifiIfName\"] =~ /${uapintf:regex}/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "rate(unifiIfRxError{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Rx errors",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiIfTxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Tx dropped",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(unifiIfTxError{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{unifiIfName}}: Tx errors",
+          "refId": "D"
         }
       ],
       "title": "Ethernet (802.3) Drops/Errors",
@@ -2078,8 +1670,8 @@
     },
     {
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -2136,25 +1728,21 @@
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "A"
+              "options": "D"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.ifDescr}: ${__field.name}: In"
+                "id": "custom.transform",
+                "value": "negative-Y"
               }
             ]
           },
           {
             "matcher": {
               "id": "byFrameRefID",
-              "options": "B"
+              "options": "E"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.labels.ifDescr}: ${__field.name}: Out"
-              },
               {
                 "id": "custom.transform",
                 "value": "negative-Y"
@@ -2167,7 +1755,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 80
+        "y": 66
       },
       "id": 4,
       "options": {
@@ -2191,262 +1779,71 @@
       "targets": [
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"ifInDiscards\" or r[\"_field\"] == \"ifInErrors\" or r[\"_field\"] == \"ifInUnknownProtos\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and exists r[\"ifDescr\"])\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
+          "editorMode": "code",
+          "expr": "rate(ifInDiscards{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{ifName}}: In discards",
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\")\n  |> filter(fn: (r) => r[\"_field\"] == \"ifOutDiscards\" or r[\"_field\"] == \"ifOutErrors\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/ and exists r[\"ifDescr\"])\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
+          "editorMode": "code",
+          "expr": "rate(ifInErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{ifName}}: In errors",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ifInUnknownProtos{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{ifName}}: Unknown protocols",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ifOutDiscards{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{ifName}}: Out discards",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ifOutErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "format": "time_series",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{instance}} {{ifName}}: Out errors",
+          "refId": "E"
         }
       ],
       "title": "All Interface Drops/Errors (IF-MIB)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.name}: In"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} ${__field.name}: Out"
-              },
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 14,
-        "x": 0,
-        "y": 87
-      },
-      "id": 44,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"snmpInPkts\" or r[\"_field\"] == \"snmpInGetResponses\" or r[\"_field\"] == \"snmpInGetRequests\" or r[\"_field\"] == \"snmpInGetNexts\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> derivative(unit: 1m, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"In\")",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"snmpOutPkts\" or r[\"_field\"] == \"snmpOutGetResponses\" or r[\"_field\"] == \"snmpOutGetRequests\" or r[\"_field\"] == \"snmpOutGetNexts\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> derivative(unit: 1m, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Out\")",
-          "refId": "B"
-        }
-      ],
-      "title": "SNMP Messages (/min)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": 0,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "${__field.labels.source} Objects"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 10,
-        "x": 14,
-        "y": 87
-      },
-      "id": 45,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "13.1.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
-          },
-          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> filter(fn: (r) => r[\"_field\"] == \"snmpInTotalReqVars\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> derivative(unit: 1m, nonNegative: true)\n  |> aggregateWindow(every: ${interval}, fn: mean, createEmpty: false)\n  |> yield(name: \"Objects\")",
-          "refId": "A"
-        }
-      ],
-      "title": "SNMP Objects Retrieved (/min)",
       "type": "timeseries"
     }
   ],
@@ -2459,183 +1856,116 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "current": {
-          "text": "",
-          "value": ""
-        },
+        "name": "ap",
+        "label": "Access point",
+        "description": "Filters all panels.",
+        "type": "query",
         "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "definition": "buckets() ",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Bucket",
-        "multi": false,
-        "name": "bucket",
-        "options": [],
-        "query": "buckets() ",
+        "definition": "label_values(up{job=\"unifi_ap_snmp\"}, instance)",
+        "query": {
+          "query": "label_values(up{job=\"unifi_ap_snmp\"}, instance)",
+          "refId": "Prometheus-ap-Variable-Query"
+        },
         "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "auto": true,
-        "auto_count": 100,
-        "auto_min": "30s",
-        "current": {
-          "text": "auto",
-          "value": "$__auto_interval_interval"
-        },
-        "hide": 0,
-        "label": "Sampling",
-        "name": "interval",
-        "options": [
-          {
-            "selected": true,
-            "text": "auto",
-            "value": "$__auto_interval_interval"
-          },
-          {
-            "selected": false,
-            "text": "1m",
-            "value": "1m"
-          },
-          {
-            "selected": false,
-            "text": "10m",
-            "value": "10m"
-          },
-          {
-            "selected": false,
-            "text": "30m",
-            "value": "30m"
-          },
-          {
-            "selected": false,
-            "text": "1h",
-            "value": "1h"
-          },
-          {
-            "selected": false,
-            "text": "6h",
-            "value": "6h"
-          },
-          {
-            "selected": false,
-            "text": "12h",
-            "value": "12h"
-          },
-          {
-            "selected": false,
-            "text": "1d",
-            "value": "1d"
-          }
-        ],
-        "query": "1m,10m,30m,1h,6h,12h,1d",
-        "queryValue": "",
-        "refresh": 2,
-        "skipUrlSync": false,
-        "type": "interval"
-      },
-      {
-        "allValue": null,
-        "current": {
-          "text": "",
-          "value": ""
-        },
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
-        },
-        "definition": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> keep(columns: [\"source\"])\n  |> distinct(column: \"source\")\n  |> group()",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Hostname",
+        "sort": 1,
         "multi": true,
-        "name": "uaphostname",
-        "options": [],
-        "query": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP\")\n  |> keep(columns: [\"source\"])\n  |> distinct(column: \"source\")\n  |> group()",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
+        "includeAll": true,
         "allValue": null,
         "current": {
-          "text": "",
-          "value": ""
+          "text": "All",
+          "value": "$__all"
         },
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
-        },
-        "definition": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiRadioCuTotal\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiRadioRadio\"])\n  |> distinct(column: \"unifiRadioRadio\")\n  |> group()",
+        "options": [],
+        "regex": "",
         "hide": 0,
-        "includeAll": true,
+        "skipUrlSync": false
+      },
+      {
+        "name": "radio",
         "label": "Radio",
-        "multi": true,
-        "name": "uapradio",
-        "options": [],
-        "query": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiRadioCuTotal\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiRadioRadio\"])\n  |> distinct(column: \"unifiRadioRadio\")\n  |> group()",
+        "description": "Filters radio panels.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiRadioName)",
+        "query": {
+          "query": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiRadioName)",
+          "refId": "Prometheus-radio-Variable-Query"
+        },
         "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
         "allValue": null,
         "current": {
-          "text": "",
-          "value": ""
+          "text": "All",
+          "value": "$__all"
         },
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
-        },
-        "definition": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiVapChannel\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiVapName\"])\n  |> distinct(column: \"unifiVapName\")\n  |> group()",
-        "hide": 0,
-        "includeAll": true,
-        "label": "vAP",
-        "multi": true,
-        "name": "uapvap",
         "options": [],
-        "query": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiVapChannel\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiVapName\"])\n  |> distinct(column: \"unifiVapName\")\n  |> group()",
-        "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "hide": 0,
+        "skipUrlSync": false
       },
       {
+        "name": "vap",
+        "label": "VAP",
+        "description": "Filters VAP panels.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiVapName)",
+        "query": {
+          "query": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiVapName)",
+          "refId": "Prometheus-vap-Variable-Query"
+        },
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
         "allValue": null,
         "current": {
-          "text": "",
-          "value": ""
+          "text": "All",
+          "value": "$__all"
         },
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
-        },
-        "definition": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiIfRxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiIfName\"])\n  |> distinct(column: \"unifiIfName\")\n  |> group()",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Interface",
-        "multi": true,
-        "name": "uapintf",
         "options": [],
-        "query": "from(bucket: \"${bucket}\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"snmp.UAP.network\" and r[\"_field\"] == \"unifiIfRxBytes\")\n  |> filter(fn: (r) => r[\"source\"] =~ /${uaphostname:regex}/)\n  |> keep(columns: [\"unifiIfName\"])\n  |> distinct(column: \"unifiIfName\")\n  |> group()",
-        "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "iface",
+        "label": "Ethernet interface",
+        "description": "Filters UniFi Ethernet panels.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiIfName)",
+        "query": {
+          "query": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiIfName)",
+          "refId": "Prometheus-iface-Variable-Query"
+        },
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0,
+        "skipUrlSync": false
       }
     ]
   },
