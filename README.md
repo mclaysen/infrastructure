@@ -60,6 +60,39 @@ The playbook reconciles multiple stacks. Immich remains gated by default, so
 omit the extra variable only when its deployment should be skipped. Review
 pending configuration changes before running the playbook.
 
+### SNMP exporter configuration
+
+The files in [container-manager/snmp_exporter](container-manager/snmp_exporter)
+are generator inputs, not exporter configurations. The generator combines an
+input with the device's MIBs to produce the expanded metrics configuration.
+Download the required standard and vendor MIBs as described in the
+[SNMP exporter generator documentation](https://github.com/prometheus/snmp_exporter/tree/v0.30.1/generator).
+
+For example, with the UniFi and standard MIBs in `$HOME/snmp-generator/mibs`,
+generate the UDM Pro and AP modules from the repository root:
+
+```bash
+mkdir -p "$HOME/snmp-generator/output"
+docker run --rm \
+  --mount "type=bind,src=$HOME/snmp-generator/mibs,dst=/mibs,readonly" \
+  --mount "type=bind,src=$PWD/container-manager/snmp_exporter/unifi_generator.yml,dst=/generator.yml,readonly" \
+  --mount "type=bind,src=$HOME/snmp-generator/output,dst=/output" \
+  prom/snmp-generator:v0.30.1 \
+  generate -m /mibs -g /generator.yml -o /output/unifi-snmp.yml
+```
+
+Copy the generated modules into the existing `modules` section of
+[snmp_config.yml.j2](container-manager/stacks/snmp_config.yml.j2), preserving
+the other modules. Configure the matching authentication using Vault variables
+and add scrape jobs to
+[prometheus_config.yml.j2](container-manager/stacks/prometheus_config.yml.j2).
+Generator inputs may contain credentials; keep generated files containing
+secrets out of the repository.
+
+Deploy with Ansible and ensure Prometheus and the SNMP exporter are recreated
+to pick up replaced bind-mounted configuration files; the current playbook
+does not recreate them automatically when these files change.
+
 ### NVIDIA maintenance
 
 Routine container-manager runs exclude kernel, DKMS, CUDA, and NVIDIA packages.
