@@ -123,7 +123,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} * on(instance) group_left(sysName) (sysName{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(unifiApSystemModel) (unifiApSystemModel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(unifiApSystemVersion) (unifiApSystemVersion{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysDescr) (sysDescr{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysContact) (sysContact{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}) * on(instance) group_left(sysLocation) (sysLocation{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} or on(instance) up{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"})",
+          "expr": "up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} * on(instance) group_left(sysName) (sysName{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}) * on(instance) group_left(unifiApSystemModel) (unifiApSystemModel{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}) * on(instance) group_left(unifiApSystemVersion) (unifiApSystemVersion{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}) * on(instance) group_left(sysDescr) (sysDescr{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}) * on(instance) group_left(sysContact) (sysContact{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}) * on(instance) group_left(sysLocation) (sysLocation{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} or on(instance) up{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -241,7 +241,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sysUpTime{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"} / 100",
+          "expr": "sysUpTime{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`} / 100",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -305,7 +305,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (instance, unifiVapName, unifiVapIndex, unifiVapEssId, metric) (label_replace(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Channel\", \"__name__\", \".*\") or label_replace(unifiVapExtChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Extended channel\", \"__name__\", \".*\") or label_replace(unifiVapTxPower{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}, \"metric\", \"Tx power (dBm)\", \"__name__\", \".*\"))",
+          "expr": "sum by (instance, unifiVapName, unifiVapIndex, unifiVapEssId, metric) (label_replace(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}, \"metric\", \"Channel\", \"__name__\", \".*\") or label_replace(unifiVapExtChannel{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}, \"metric\", \"Extended channel\", \"__name__\", \".*\") or label_replace(unifiVapTxPower{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}, \"metric\", \"Tx power (dBm)\", \"__name__\", \".*\"))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -419,7 +419,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiRadioName=~`${radio:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -520,7 +520,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiVapNumStations{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}",
+          "expr": "unifiVapNumStations{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -621,7 +621,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiRadioOtherBss{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "expr": "unifiRadioOtherBss{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiRadioName=~`${radio:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -726,7 +726,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiRadioCuSelfRx{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "expr": "unifiRadioCuSelfRx{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiRadioName=~`${radio:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -739,7 +739,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiRadioCuSelfTx{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "expr": "unifiRadioCuSelfTx{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiRadioName=~`${radio:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -752,7 +752,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiRadioName=~\"${radio:regex}\"}",
+          "expr": "unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiRadioName=~`${radio:regex}`}",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -869,7 +869,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "8 * rate(unifiVapRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "8 * rate(unifiVapRxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -882,7 +882,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "8 * rate(unifiVapTxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "8 * rate(unifiVapTxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -996,7 +996,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapRxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapRxPackets{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1009,7 +1009,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapTxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapTxPackets{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1147,7 +1147,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapRxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapRxDropped{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1160,7 +1160,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapRxErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapRxErrors{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1173,7 +1173,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapRxCrypts{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapRxCrypts{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1186,7 +1186,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapRxFrags{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapRxFrags{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1199,7 +1199,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapTxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapTxDropped{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1212,7 +1212,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapTxErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapTxErrors{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1225,7 +1225,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiVapTxRetries{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiVapName=~\"${vap:regex}\"}[10m])",
+          "expr": "rate(unifiVapTxRetries{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiVapName=~`${vap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1339,7 +1339,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "8 * rate(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "8 * rate(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1352,7 +1352,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "8 * rate(unifiIfTxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "8 * rate(unifiIfTxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1466,7 +1466,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfRxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfRxPackets{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1479,7 +1479,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfRxMulticast{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfRxMulticast{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1492,7 +1492,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfTxPackets{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfTxPackets{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1618,7 +1618,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfRxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfRxDropped{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1631,7 +1631,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfRxError{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfRxError{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1644,7 +1644,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfTxDropped{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfTxDropped{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1657,7 +1657,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(unifiIfTxError{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\",unifiIfName=~\"${iface:regex}\"}[10m])",
+          "expr": "rate(unifiIfTxError{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`,unifiIfName=~`${iface:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1783,7 +1783,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ifInDiscards{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "expr": "rate(ifInDiscards{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1796,7 +1796,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ifInErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "expr": "rate(ifInErrors{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1809,7 +1809,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ifInUnknownProtos{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "expr": "rate(ifInUnknownProtos{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1822,7 +1822,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ifOutDiscards{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "expr": "rate(ifOutDiscards{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1835,7 +1835,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ifOutErrors{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}[10m])",
+          "expr": "rate(ifOutErrors{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}[10m])",
           "format": "time_series",
           "instant": false,
           "range": true,
@@ -1892,9 +1892,9 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiRadioName)",
+        "definition": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiRadioName)",
         "query": {
-          "query": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiRadioName)",
+          "query": "label_values(unifiRadioCuTotal{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiRadioName)",
           "refId": "Prometheus-radio-Variable-Query"
         },
         "refresh": 1,
@@ -1920,9 +1920,9 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiVapName)",
+        "definition": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiVapName)",
         "query": {
-          "query": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiVapName)",
+          "query": "label_values(unifiVapChannel{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiVapName)",
           "refId": "Prometheus-vap-Variable-Query"
         },
         "refresh": 1,
@@ -1948,9 +1948,9 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiIfName)",
+        "definition": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiIfName)",
         "query": {
-          "query": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~\"${ap:regex}\"}, unifiIfName)",
+          "query": "label_values(unifiIfRxBytes{job=\"unifi_ap_snmp\",instance=~`${ap:regex}`}, unifiIfName)",
           "refId": "Prometheus-iface-Variable-Query"
         },
         "refresh": 1,
