@@ -97,6 +97,21 @@ services:
       - {{ blackbox_exporter_config_path }}:/etc/blackbox_exporter/config.yml:ro
     networks:
       - monitoring-network
+  geoipupdate:
+    image: ghcr.io/maxmind/geoipupdate:{{ max_mind_geoipupdate_version }}
+    container_name: geoipupdate
+    restart: unless-stopped
+    env_file:
+      - path: ./geoipupdate.env
+        format: raw
+    environment:
+      - GEOIPUPDATE_EDITION_IDS=${GEOIPUPDATE_EDITION_IDS}
+      - GEOIPUPDATE_FREQUENCY=${GEOIPUPDATE_FREQUENCY}
+      - GEOIPUPDATE_VERBOSE=${GEOIPUPDATE_VERBOSE}
+    volumes:
+      - geoip_data:/usr/share/GeoIP
+    networks:
+      - monitoring-network
   dozzle-agent:
     image: amir20/dozzle:{{ dozzle_version }}
     command: agent
@@ -147,6 +162,8 @@ volumes:
     name: monitoring_stack_loki_data
   alloy_data:
     name: monitoring_stack_alloy_data
+  geoip_data:
+    name: monitoring_stack_geoip_data
 networks:
   monitoring-network:
     name: monitoring-network

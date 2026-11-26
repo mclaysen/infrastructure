@@ -63,6 +63,8 @@
         - value: "{{ ghost_database_root_password }}"
         - value: "{{ email_password }}"
         - value: "{{ unifi_unpoller_password }}"
+        - value: "{{ max_mind_account_id }}"
+        - value: "{{ max_mind_license_key }}"
         - value: "{{ dawarich_postgres_password }}"
         - value: "{{ dawarich_secret_key_base }}"
         - value: "{{ dawarich_metrics_password }}"
@@ -109,6 +111,7 @@
         - {src: ../stacks/ghost.email-pass.env.j2, dest: /opt/compose/ghost/email-pass.env }
         - {src: ../stacks/monitoring.env.j2, dest: /opt/compose/monitoring/.env }
         - {src: ../stacks/monitoring.unpoller-pass.env.j2, dest: /opt/compose/monitoring/unpoller-pass.env }
+        - {src: ../stacks/monitoring.geoipupdate.env.j2, dest: /opt/compose/monitoring/geoipupdate.env }
         - {src: ../stacks/dawarich.env.j2, dest: /opt/compose/dawarich/.env }
         - {src: ../stacks/dawarich.postgres-pass.env.j2, dest: /opt/compose/dawarich/postgres-pass.env }
         - {src: ../stacks/dawarich.database-pass.env.j2, dest: /opt/compose/dawarich/database-pass.env }
