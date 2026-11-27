@@ -15,6 +15,10 @@ scrape_configs:
     static_configs:
       - targets: ["photon:2322"]
 
+  - job_name: goflow2
+    static_configs:
+      - targets: ["goflow2:8080"]
+
   - job_name: dawarich
     basic_auth:
       username: "{{ dawarich_metrics_username }}"
@@ -132,6 +136,7 @@ scrape_configs:
         - https://hass.mclaysen.com
         - https://nas.mclaysen.com
         - https://nas2.mclaysen.com
+        - http://goflow2:8080/__health
     relabel_configs:
     - source_labels: [__address__]
       target_label: __param_target

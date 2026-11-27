@@ -112,6 +112,22 @@ services:
       - geoip_data:/usr/share/GeoIP
     networks:
       - monitoring-network
+  goflow2:
+    image: netsampler/goflow2:{{ goflow2_version }}
+    container_name: goflow2
+    restart: unless-stopped
+    ports:
+      - "{{ container_manager_host_ip }}:2055:2055/udp"
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/__health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - monitoring-network
   dozzle-agent:
     image: amir20/dozzle:{{ dozzle_version }}
     command: agent
